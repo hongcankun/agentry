@@ -5,6 +5,7 @@ A collection of Agent Skills following the open Agent Skills convention.
 ## Skills Included
 
 - [agent-skill-creator](./skills/agent-skill-creator): Create and refine Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package.
+- [code-review](./skills/code-review): Review code changes for correctness, readability, security, performance, and maintainability, then deliver prioritized, actionable feedback. Use when a user asks to review a diff, pull request, commit, branch, or file, or wants feedback on code they wrote or modified.
 - [conventional-commits](./skills/conventional-commits): Create commits that follow the Conventional Commits specification, including selecting appropriate types, writing clear descriptions, and validating commit messages.
 - [git-workflow](./skills/git-workflow): Apply git workflow best practices, including choosing a branching strategy, writing commits and pull requests, performing merges and rebases safely, resolving conflicts, and managing releases and tags.
 - [prompt-template-creator](./skills/prompt-template-creator): Create and refine reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation.
