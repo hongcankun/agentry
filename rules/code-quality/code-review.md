@@ -33,4 +33,5 @@ For local review of uncommitted or unmerged work, these gates do not block the r
 ## Related
 
 - `code-review` skill — the full review procedure and references.
+- `code-reviewer` agent — a subagent that runs the review in an isolated context, following the `code-review` skill.
 - `git-workflow` and `conventional-commits` skills — branch, merge, and commit standards.

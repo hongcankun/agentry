@@ -13,6 +13,12 @@ A collection of reusable extensions for AI coding agents — skills, rules, and 
 - [rule-manager](./skills/rule-manager): Create, update, or review agent rules that guide AI agent behavior, at project scope or user/global scope, including defining scope and triggers, writing clear and actionable directives, organizing rule files, and reviewing rules for clarity and conflicts.
 - [subagent-manager](./skills/subagent-manager): Create, update, or review AI subagents (specialized agents an AI coding tool delegates tasks to) across tools like Claude Code, Cursor, OpenCode, Trae CLI, and Codex, including defining the agent's role and trigger conditions, writing a focused system prompt, scoping tools and model, choosing the right scope, and reviewing agents for clarity and overlap.
 
+## Agents Included
+
+Subagents an AI coding tool can delegate focused tasks to, in [`agents/`](./agents), ready to be installed into a tool's agents directory (e.g. `.claude/agents/`, `.trae/agents/`).
+
+- [code-reviewer](./agents/code-reviewer.md): Reviews code changes for correctness, security, readability, performance, and maintainability, then returns prioritized, actionable feedback. Use proactively after writing or modifying code, or when reviewing a diff, pull request, merge request, commit, branch, or file.
+
 ## Rules Included
 
 Platform-agnostic agent rules, organized by topic under [`rules/`](./rules), ready to be installed into a tool's rules directory (e.g. `.claude/rules/`, `.trae/rules/`).
