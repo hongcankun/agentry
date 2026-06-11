@@ -12,3 +12,9 @@ A collection of Agent Skills following the open Agent Skills convention.
 - [readme-manager](./skills/readme-manager): Create or update README.md files in git repositories, including analyzing the repo structure, identifying key information, and following standard README conventions.
 - [rule-manager](./skills/rule-manager): Create, update, or review agent rules that guide AI agent behavior, at project scope or user/global scope, including defining scope and triggers, writing clear and actionable directives, organizing rule files, and reviewing rules for clarity and conflicts.
 - [subagent-manager](./skills/subagent-manager): Create, update, or review AI subagents (specialized agents an AI coding tool delegates tasks to) across tools like Claude Code, Cursor, OpenCode, Trae CLI, and Codex, including defining the agent's role and trigger conditions, writing a focused system prompt, scoping tools and model, choosing the right scope, and reviewing agents for clarity and overlap.
+
+## Rules Included
+
+Platform-agnostic agent rules, organized by topic under [`rules/`](./rules), ready to be installed into a tool's rules directory (e.g. `.claude/rules/`, `.trae/rules/`).
+
+- [code-quality/code-review](./rules/code-quality/code-review.md): Policy for when code review is required, the gates a change must pass before merging, and approval criteria; defers the review procedure to the `code-review` skill.
