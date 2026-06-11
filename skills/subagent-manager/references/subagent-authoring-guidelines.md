@@ -10,6 +10,10 @@ Guidance for writing focused, reliable AI subagents.
 4. **Minimally scoped**: Grant only the tools the job requires. Choose a model tier that fits the work.
 5. **Composable**: Subagents should chain cleanly (e.g. a planner feeds an implementer feeds a reviewer) rather than overlap.
 
+## Naming the subagent
+
+Name the subagent with a **noun that names the role or doer**, not a verb phrase that names the action. A subagent is an actor the main agent delegates to, so `code-reviewer`, `test-runner`, or `security-auditor` read naturally; `code-review` or `run-tests` do not. Keep it kebab-case and unique. This is the opposite emphasis from skills and rules, which name a capability or policy — an agent names *who* does the work.
+
 ## Writing the description
 
 The `description` drives automatic delegation, so optimize it for matching:

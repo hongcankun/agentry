@@ -5,6 +5,7 @@ Use this checklist when reviewing an AI subagent definition file.
 ## Metadata
 
 - `name` is present, unique, and in kebab-case (or correctly derived from the filename for tools that do so).
+- `name` reads as a noun naming the role/doer (e.g. `code-reviewer`, `test-runner`), not a verb phrase naming the action (`code-review`).
 - `description` states both what the subagent does and **when to invoke it**.
 - Trigger phrases in the description are concrete enough to drive delegation.
 - "Use PROACTIVELY" / "MUST BE USED" (Cursor: "use proactively") is present only when automatic invocation is intended.
