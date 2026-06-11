@@ -1,6 +1,6 @@
-# Skills
+# Agentry
 
-A collection of Agent Skills following the open Agent Skills convention.
+A collection of reusable extensions for AI coding agents — skills, rules, and agents — following open agent conventions.
 
 ## Skills Included
 
