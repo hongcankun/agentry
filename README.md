@@ -99,3 +99,18 @@ python3 scripts/generate_claude.py --check  # verify up to date (for CI); same f
 Claude Code and Trae have separate plugin specs that happen to overlap for our content: Trae can read Claude's catalog as a fallback, but its own schema differs (e.g. `owner` is a string, not an object), so we ship a native `.trae-plugin/marketplace.json`. Plugin packages also differ — Claude uses a per-plugin `plugin.json`, Trae auto-detects component dirs and uses `traecli.yaml` only for MCP servers, hooks, models, or tool-permissions. Agentry's plugins currently contain only skills and subagents, so no per-plugin manifest is required on Trae. If a plugin later adds MCP/hooks/models, `generate_trae.py` would need to emit a `traecli.yaml` for it.
 
 Adding support for another tool means adding its targets to `scripts/install.py` and, if it has a package format, a generator alongside the existing ones — without changing the canonical manifest.
+
+## Versioning
+
+Versions live in `agentry.json` and propagate to the generated packaging. Two levels:
+
+- **Per-plugin `version`** (one per entry in `plugins`) — the meaningful, user-facing version. Both Claude Code and Trae use it to deliver updates: a plugin updates for users only when its version string changes (omit it and the tool falls back to the git commit SHA). Version each plugin **independently** — bump only the plugins whose content actually changed, so unrelated plugins don't show spurious updates.
+- **Top-level `version`** — an informational version for the marketplace catalog as a whole. It is emitted into Claude Code's `marketplace.json`; neither tool keys plugin updates off it. Bump it for catalog-level changes (adding/removing a plugin, or a coordinated release).
+
+Use [SemVer](https://semver.org) for a plugin's content:
+
+- **patch** — wording fixes, clarifications, or non-behavioral edits to existing components.
+- **minor** — add a new skill, subagent, or rule to the plugin, or a backward-compatible capability.
+- **major** — remove or rename a component, or otherwise change behavior in a breaking way.
+
+Bump versions by editing `agentry.json`, then regenerate the packaging (`scripts/generate_*.py`).

@@ -40,10 +40,12 @@ def build_marketplace(manifest):
         "$generated": GENERATED_NOTE,
         "name": manifest["name"],
         "description": manifest.get("description", ""),
-        "owner": manifest.get("owner", {}),
-        "metadata": {"pluginRoot": "./plugins"},
-        "plugins": [],
     }
+    if "version" in manifest:
+        catalog["version"] = manifest["version"]
+    catalog["owner"] = manifest.get("owner", {})
+    catalog["metadata"] = {"pluginRoot": "./plugins"}
+    catalog["plugins"] = []
     for plugin in manifest["plugins"]:
         entry = {
             "name": plugin["name"],
