@@ -1,0 +1,27 @@
+{
+  "name": "my-marketplace",
+  "description": "What this marketplace distributes.",
+  "owner": {
+    "name": "Your Name"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "in-repo-plugin",
+      "source": "./in-repo-plugin",
+      "description": "A plugin kept in this marketplace repo.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "external-plugin",
+      "source": {
+        "source": "github",
+        "repo": "owner/repo",
+        "ref": "v1.0.0"
+      },
+      "description": "A plugin fetched from an external git repository."
+    }
+  ]
+}

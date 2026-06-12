@@ -1,7 +1,7 @@
 {
   "$generated": "GENERATED from agentry.json by scripts/generate_claude.py. Do not edit by hand.",
   "name": "agentry-authoring",
-  "description": "Authoring skills for building AI agent extensions: create skills, subagents, rules, and prompt templates that follow open agent conventions.",
+  "description": "Authoring skills for building AI agent extensions: create skills, subagents, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
   "version": "0.1.0",
   "author": {
     "name": "hongcankun"

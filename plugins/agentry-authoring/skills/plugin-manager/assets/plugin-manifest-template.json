@@ -1,0 +1,11 @@
+{
+  "name": "my-plugin",
+  "description": "What this plugin bundles and who it is for.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Your Name"
+  },
+  "homepage": "https://github.com/owner/repo",
+  "repository": "https://github.com/owner/repo",
+  "license": "MIT"
+}
