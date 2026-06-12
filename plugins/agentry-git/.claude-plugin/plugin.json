@@ -1,0 +1,12 @@
+{
+  "$generated": "GENERATED from agentry.json by scripts/generate_claude.py. Do not edit by hand.",
+  "name": "agentry-git",
+  "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
+  "version": "0.1.0",
+  "author": {
+    "name": "hongcankun"
+  },
+  "homepage": "https://github.com/hongcankun/agentry",
+  "repository": "https://github.com/hongcankun/agentry",
+  "license": "MIT"
+}

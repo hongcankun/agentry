@@ -1,0 +1,54 @@
+{
+  "$comment": "Canonical, tool-agnostic source of truth for Agentry's extensions and how they group into plugins. Per-tool packaging (e.g. .claude-plugin/, .trae-plugin/) is GENERATED from this file by the scripts/generate_*.py scripts, and scripts/install.py installs components into a tool's directories from here. Edit this file, not the generated artifacts.",
+  "name": "agentry",
+  "description": "A collection of reusable extensions for AI coding agents, grouped into plugins.",
+  "version": "0.1.0",
+  "owner": {
+    "name": "hongcankun"
+  },
+  "homepage": "https://github.com/hongcankun/agentry",
+  "repository": "https://github.com/hongcankun/agentry",
+  "license": "MIT",
+  "plugins": [
+    {
+      "name": "agentry-code-quality",
+      "description": "Code review skill and a code-reviewer subagent that catch correctness, security, and maintainability issues and return prioritized, actionable feedback.",
+      "version": "0.1.0",
+      "category": "code-quality",
+      "keywords": ["code-review", "security", "subagent"],
+      "skills": ["code-review"],
+      "agents": ["code-reviewer"],
+      "rules": ["code-quality/code-review.md"]
+    },
+    {
+      "name": "agentry-git",
+      "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
+      "version": "0.1.0",
+      "category": "vcs",
+      "keywords": ["git", "commits", "conventional-commits", "workflow"],
+      "skills": ["git-workflow", "conventional-commits"],
+      "agents": [],
+      "rules": []
+    },
+    {
+      "name": "agentry-authoring",
+      "description": "Authoring skills for building AI agent extensions: create skills, subagents, rules, and prompt templates that follow open agent conventions.",
+      "version": "0.1.0",
+      "category": "authoring",
+      "keywords": ["skills", "subagents", "rules", "prompts"],
+      "skills": ["agent-skill-creator", "subagent-manager", "rule-manager", "prompt-template-creator"],
+      "agents": [],
+      "rules": []
+    },
+    {
+      "name": "agentry-docs",
+      "description": "Documentation authoring skills for software projects, starting with creating and maintaining README files following standard conventions.",
+      "version": "0.1.0",
+      "category": "documentation",
+      "keywords": ["readme", "documentation"],
+      "skills": ["readme-manager"],
+      "agents": [],
+      "rules": []
+    }
+  ]
+}

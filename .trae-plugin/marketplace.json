@@ -1,0 +1,31 @@
+{
+  "$generated": "GENERATED from agentry.json by scripts/generate_trae.py. Do not edit by hand.",
+  "name": "agentry",
+  "owner": "hongcankun",
+  "plugins": [
+    {
+      "name": "agentry-code-quality",
+      "description": "Code review skill and a code-reviewer subagent that catch correctness, security, and maintainability issues and return prioritized, actionable feedback.",
+      "version": "0.1.0",
+      "source": "./plugins/agentry-code-quality"
+    },
+    {
+      "name": "agentry-git",
+      "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
+      "version": "0.1.0",
+      "source": "./plugins/agentry-git"
+    },
+    {
+      "name": "agentry-authoring",
+      "description": "Authoring skills for building AI agent extensions: create skills, subagents, rules, and prompt templates that follow open agent conventions.",
+      "version": "0.1.0",
+      "source": "./plugins/agentry-authoring"
+    },
+    {
+      "name": "agentry-docs",
+      "description": "Documentation authoring skills for software projects, starting with creating and maintaining README files following standard conventions.",
+      "version": "0.1.0",
+      "source": "./plugins/agentry-docs"
+    }
+  ]
+}

@@ -32,6 +32,7 @@ For local review of uncommitted or unmerged work, these gates do not block the r
 
 ## Related
 
+- `agentry-code-quality` plugin — the plugin this rule ships alongside; install it with `scripts/install.py`.
 - `code-review` skill — the full review procedure and references.
 - `code-reviewer` agent — a subagent that runs the review in an isolated context, following the `code-review` skill.
-- `git-workflow` and `conventional-commits` skills — branch, merge, and commit standards.
+- `git-workflow` and `conventional-commits` skills (in the `agentry-git` plugin) — branch, merge, and commit standards.
