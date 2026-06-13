@@ -4,7 +4,7 @@ Per-tool conventions for how plugins and marketplaces are structured. All tools 
 
 Always detect the target tool from existing plugin/marketplace files before writing, and follow whatever convention the project already uses. Plugin and marketplace names must be kebab-case (lowercase letters, numbers, hyphens), and plugin names must be unique within a marketplace.
 
-> Across both tools below, the plugin format has **no rules component**. Rules are not delivered by installing a plugin; plan a separate install path for them.
+> Across both tools below, the plugin format has **no rules component**. Rules are not delivered by installing a plugin; plan a separate install path for them. A rule is therefore associated with a plugin by reference (not nested inside it), which lets the same rule belong to more than one plugin — treat the rule↔plugin relationship as many-to-many.
 
 ## Claude Code
 

@@ -45,7 +45,13 @@ python3 scripts/install.py --tool trae --plugin agentry-code-quality
 
 The script reads `agentry.json` (so rules map to the same plugins as the marketplace) and writes to the tool's rules directory (`.claude/rules/`, `.trae/rules/`). It can also install skills and subagents directly from a checkout — useful for development or tools without marketplace support; see `python3 scripts/install.py --help`.
 
-Flags: `--tool {claude,trae}`, `--plugin`, `--component {skills,agents,rules}` (repeatable), `--scope {project,global}`, `--project-dir`, `--dry-run`, `--force`.
+Add `--symlink` to link components back to the checkout instead of copying, so they track the source with no drift (the link is relative; not portable to Windows checkouts):
+
+```
+python3 scripts/install.py --tool trae --plugin agentry-code-quality --symlink
+```
+
+Flags: `--tool {claude,trae}`, `--plugin`, `--component {skills,agents,rules}` (repeatable), `--scope {project,global}`, `--project-dir`, `--symlink`, `--dry-run`, `--force`.
 
 ## Plugins
 
