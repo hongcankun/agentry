@@ -28,6 +28,7 @@ Examples:
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -94,20 +95,42 @@ def plan_copies(plugins, components):
     return jobs
 
 
-def install_one(src, dest, dry_run, force):
-    """Copy a file or directory tree from src to dest. Returns 'installed' or 'skipped'."""
-    if dest.exists() and not force:
+def install_one(src, dest, dry_run, force, symlink):
+    """Copy or symlink src to dest. Returns 'installed' or 'skipped'."""
+    # Safety: never let dest operations touch the source itself (e.g. when dest
+    # is an existing symlink pointing back into the source tree).
+    if dest.is_symlink():
+        link_target = (dest.parent / os.readlink(dest)).resolve()
+        same = link_target == src.resolve()
+    else:
+        same = dest.exists() and dest.resolve() == src.resolve()
+    if same and not force:
+        print(f"skip (already linked/identical): {dest}")
+        return "skipped"
+
+    exists = dest.exists() or dest.is_symlink()
+    if exists and not force:
         print(f"skip (exists): {dest}  [use --force to overwrite]")
         return "skipped"
     if dry_run:
-        print(f"would install: {src}  ->  {dest}")
+        print(f"{'would link' if symlink else 'would copy'}: {src}  ->  {dest}")
         return "installed"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if src.is_dir():
-        shutil.copytree(src, dest, dirs_exist_ok=force)
+    if exists:
+        if dest.is_symlink() or dest.is_file():
+            dest.unlink()
+        else:
+            shutil.rmtree(dest)
+    if symlink:
+        # Relative target so the link survives the repo being moved.
+        dest.symlink_to(os.path.relpath(src, dest.parent))
+        print(f"linked: {dest}  ->  {src}")
+    elif src.is_dir():
+        shutil.copytree(src, dest)
+        print(f"installed: {dest}")
     else:
         shutil.copy2(src, dest)
-    print(f"installed: {dest}")
+        print(f"installed: {dest}")
     return "installed"
 
 
@@ -139,6 +162,12 @@ def main():
     )
     parser.add_argument("--dry-run", action="store_true", help="Show what would be copied without writing.")
     parser.add_argument("--force", action="store_true", help="Overwrite existing files at the destination.")
+    parser.add_argument(
+        "--symlink",
+        action="store_true",
+        help="Symlink components back to this checkout instead of copying, so they track the "
+        "source with no drift. The link target is relative. Not portable to Windows checkouts.",
+    )
     args = parser.parse_args()
 
     components = set(args.component) if args.component else {"rules"}
@@ -155,8 +184,11 @@ def main():
     for component, src, rel_dest in jobs:
         if not src.exists():
             sys.exit(f"error: source missing: {src}")
-        dest = (base / targets[component] / rel_dest).resolve()
-        counts[install_one(src, dest, args.dry_run, args.force)] += 1
+        # Do not resolve() the full path: if dest is already a symlink into the
+        # source tree, resolving would point operations (e.g. unlink) at the
+        # source itself. base is already absolute.
+        dest = base / targets[component] / rel_dest
+        counts[install_one(src, dest, args.dry_run, args.force, args.symlink)] += 1
 
     verb = "would install" if args.dry_run else "installed"
     summary = f"{verb} {counts['installed']} item(s) into {base} ({args.tool})"
