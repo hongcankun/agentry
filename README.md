@@ -62,6 +62,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **code-review** skill: Review code changes for correctness, readability, security, performance, and maintainability, then deliver prioritized, actionable feedback. Use when a user asks to review a diff, pull request, commit, branch, or file, or wants feedback on code they wrote or modified.
 - **code-reviewer** agent: Reviews code changes for correctness, security, readability, performance, and maintainability, then returns prioritized, actionable feedback. Use proactively after writing or modifying code, or when reviewing a diff, pull request, merge request, commit, branch, or file.
 - **code-quality/code-review** rule: Policy for when code review is required, the gates a change must pass before merging, and approval criteria; defers the review procedure to the `code-review` skill.
+- **code-quality/code-style** rule: Code style conventions covering core principles, formatting, naming, structure, language idioms, error handling, and comments that code should follow.
 
 ### [agentry-git](./plugins/agentry-git)
 

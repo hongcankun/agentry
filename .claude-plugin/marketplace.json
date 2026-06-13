@@ -15,12 +15,13 @@
       "name": "agentry-code-quality",
       "source": "./agentry-code-quality",
       "description": "Code review skill and a code-reviewer subagent that catch correctness, security, and maintainability issues and return prioritized, actionable feedback.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "code-quality",
       "keywords": [
         "code-review",
         "security",
-        "subagent"
+        "subagent",
+        "code-style"
       ]
     },
     {
