@@ -44,7 +44,7 @@ Keep the source canonical:
 
 - Edit `plugins/` only; the project-local plugins load **from** `plugins/`, so there is no separate copy to maintain.
 - Do **not** install Agentry's own plugins by **copying** their components into `.trae/skills`, `.trae/agents`, `.trae/rules` — that would duplicate the source of truth under `plugins/` and `rules/` and drift. (Committing *external*, third-party skills/agents/rules into `.trae/` is fine — only Agentry's own content must not be copied there.)
-- Rules are not delivered by plugins, so the `code-quality/code-review` rule is activated for this repo by a **symlink** at `.trae/rules/code-quality/code-review.md` pointing back to `rules/code-quality/code-review.md` (created via `python3 scripts/install.py --tool trae --plugin agentry-code-quality --symlink`). The symlink tracks the canonical source with no copy; do not replace it with a copied file.
+- Rules are not delivered by plugins, so the `agentry-code-quality` rules (`code-quality/code-review` and `code-quality/code-style`) are activated for this repo by **symlinks** under `.trae/rules/code-quality/` pointing back to the canonical files under `rules/code-quality/` (created via `python3 scripts/install.py --tool trae --plugin agentry-code-quality --symlink`, which links every rule the plugin references). The symlinks track the canonical source with no copy; do not replace them with copied files.
 
 ## Conventions
 
