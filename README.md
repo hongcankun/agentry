@@ -80,6 +80,10 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 
 - **readme-manager** skill: Create or update README.md files in git repositories, including analyzing the repo structure, identifying key information, and following standard README conventions.
 
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow — editing the canonical manifest, regenerating packaging, versioning, and PR expectations.
+
 ## Repository layout
 
 - [`agentry.json`](./agentry.json) — canonical, tool-agnostic manifest. **Edit this**, then regenerate derived files.
