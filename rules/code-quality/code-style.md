@@ -61,5 +61,5 @@ General code style conventions that apply across projects. Defer to the project'
 
 ## Related
 
-- `agentry-code-quality` plugin — the plugin this rule ships alongside; install it with `scripts/install.py`.
+- `agentry-code-quality` plugin — the plugin this rule ships alongside.
 - `code-review` rule and skill — review policy and procedure that enforce these conventions.
