@@ -25,7 +25,7 @@ When changing the extensions or plugin set, follow these steps in order:
 5. **Update `README.md`.** Keep the plugin/skill list and any affected sections in sync with the change.
 6. **Validate.**
    - For each new/changed skill, subagent, or rule, use the matching `agentry-authoring` skill (`agent-skill-creator`, `subagent-manager`, `rule-manager`, `plugin-manager`); each defines and runs its own validation. Do not reach into a skill's internal scripts directly from here.
-   - Confirm the generated packaging is current (also suitable for CI):
+   - Confirm the generated packaging is current (CI enforces this on push/PR via `.github/workflows/check.yml`):
      ```bash
      python3 scripts/agentry.py generate --check
      ```
