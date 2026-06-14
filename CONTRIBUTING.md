@@ -5,7 +5,7 @@ Thanks for your interest in contributing. This guide covers the human-facing wor
 ## Before you start
 
 - Agentry's extensions are **tool-agnostic**. Per-tool packaging is generated from a single canonical manifest, [`agentry.json`](./agentry.json) — **edit the manifest and content, never the generated files** (`.claude-plugin/`, `.trae-plugin/`). See [`AGENTS.md`](./AGENTS.md) for the full source-of-truth rules.
-- Skills, subagents, and rules each follow a standard layout. Use the matching `agentry-authoring` skill (`agent-skill-creator`, `subagent-manager`, `rule-manager`, `plugin-manager`) when creating or editing one — each defines and runs its own validation.
+- Skills, subagents, and rules each follow a standard layout. Use the matching `agentry-authoring` skill (`skill-manager`, `subagent-manager`, `rule-manager`, `plugin-manager`) when creating or editing one — each defines and runs its own validation.
 
 ## Making a change
 

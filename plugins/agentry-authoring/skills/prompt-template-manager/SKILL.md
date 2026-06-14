@@ -1,17 +1,18 @@
 ---
-name: prompt-template-creator
-description: Create and refine reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation. Use when a user asks to create a prompt template, improve an existing one, or standardize prompts for a specific task.
+name: prompt-template-manager
+description: Create, update, or review reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation. Use when a user asks to create a prompt template, improve an existing one, review a template, or standardize prompts for a specific task.
 ---
 
-# Prompt Template Creator
+# Prompt Template Manager
 
-Create or improve reusable prompt templates for AI chat or AI agents, ensuring they are clear, actionable, and easy to customize with variables.
+Create, update, or review reusable prompt templates for AI chat or AI agents, ensuring they are clear, actionable, and easy to customize with variables.
 
 ## When to use
 
 Use this skill when the task is to:
 - create a new prompt template for a specific task;
-- improve or refine an existing prompt template;
+- update or refine an existing prompt template;
+- review a prompt template for clarity, completeness, and reusability;
 - standardize prompts for consistent AI agent or chat behavior.
 
 ## Expected input
