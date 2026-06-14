@@ -16,16 +16,14 @@ Follow the maintenance workflow in [`AGENTS.md`](./AGENTS.md#maintenance-workflo
 3. Bump versions per the [Versioning policy](./README.md#versioning) (per-plugin SemVer; top-level only for catalog changes).
 4. Regenerate packaging:
    ```bash
-   python3 scripts/generate_claude.py
-   python3 scripts/generate_trae.py
+   python3 scripts/agentry.py generate
    ```
 5. Update [`README.md`](./README.md) if the plugin/skill list or any affected section changed.
 6. Validate before opening a PR:
    ```bash
-   python3 scripts/generate_claude.py --check
-   python3 scripts/generate_trae.py --check
+   python3 scripts/agentry.py generate --check
    ```
-   Both must pass — `--check` fails if the generated packaging is out of date.
+   Must pass — `--check` fails if the generated packaging is out of date.
 
 ## Proposing a new plugin
 

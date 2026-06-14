@@ -39,21 +39,26 @@ Neither the Claude Code nor the Trae plugin format has a "rules" component, so r
 
 ```
 # Install the rules for a plugin, into the tool's project rules dir
-python3 scripts/install.py --tool claude --plugin agentry-code-quality
-python3 scripts/install.py --tool trae --plugin agentry-code-quality
+python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
+python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality
 ```
 
-The script reads `agentry.json` (so rules map to the same plugins as the marketplace) and writes to the tool's rules directory (`.claude/rules/`, `.trae/rules/`). It can also install skills and subagents directly from a checkout — useful for development or tools without marketplace support; see `python3 scripts/install.py --help`.
+The script reads `agentry.json` (so rules map to the same plugins as the marketplace) and writes to the tool's rules directory (`.claude/rules/`, `.trae/rules/`). It can also install skills and subagents directly from a checkout — useful for development or tools without marketplace support; see `python3 scripts/agentry.py install --help`.
 
-A bare run is **interactive**: it reports each item's state (missing / synced / stale vs the canonical source), then prompts on a TTY — both for any selection you omitted (`--tool`, `--plugin`, `--component`s, `--symlink`) and before installing or updating each item. Pass `--defaults` to accept the default selections without asking, or `--yes` to auto-confirm the install/update actions. When stdout is not a TTY (CI, piped), it installs missing items and skips stale ones without prompting, then reminds you to run the tool's marketplace update for the plugins/skills it cannot see. Use `--status` for a report-only check that writes nothing and exits 1 if anything is missing or stale — handy for CI.
+A bare `install` run is **interactive**: it reports each item's state (missing / synced / stale vs the canonical source), then prompts on a TTY — both for any selection you omitted (`--tool`, `--plugin`, `--component`s, `--symlink`) and before installing or updating each item. Pass `--defaults` to accept the default selections without asking, or `--yes` to auto-confirm the actions. When stdout is not a TTY (CI, piped), it installs missing items and skips stale ones without prompting, then reminds you to run the tool's marketplace update for the plugins/skills it cannot see.
+
+Two companion subcommands round out the lifecycle:
+
+- `status` — report-only; writes nothing and exits 1 if anything is missing or stale (handy for CI).
+- `uninstall` — remove components this repo installed (owned copies/links); keeps items that have drifted from the source unless you pass `--force`.
 
 Add `--symlink` to link components back to the checkout instead of copying, so they track the source with no drift (the link is relative; not portable to Windows checkouts):
 
 ```
-python3 scripts/install.py --tool trae --plugin agentry-code-quality --symlink
+python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality --symlink
 ```
 
-Flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--component {skills,agents,rules}` (repeatable; default: `rules`), `--symlink` (default: copy), `--global` (default: project scope), `--project-dir`, `--status` (report-only; exit 1 on drift), `--yes`/`-y` (auto-confirm install/update actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
+Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--component {skills,agents,rules}` (repeatable; default: `rules`), `--symlink` (install only; default: copy), `--global` (default: project scope), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
 
 ## Plugins
 
@@ -92,9 +97,7 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow — edi
 - [`agentry.json`](./agentry.json) — canonical, tool-agnostic manifest. **Edit this**, then regenerate derived files.
 - [`plugins/`](./plugins) — each plugin's skills (`skills/<name>/SKILL.md`) and subagents (`agents/<name>.md`).
 - [`rules/`](./rules) — tool-agnostic rules, organized by topic; associated with plugins via the manifest.
-- [`scripts/install.py`](./scripts/install.py) — install a plugin's rules (and optionally skills/subagents) into a tool's directories.
-- [`scripts/generate_claude.py`](./scripts/generate_claude.py) — regenerate Claude Code packaging from the manifest.
-- [`scripts/generate_trae.py`](./scripts/generate_trae.py) — regenerate Trae packaging from the manifest.
+- [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` a plugin's components into a tool's directories, and `generate` per-tool packaging from the manifest.
 
 ### Generated files
 
@@ -104,14 +107,13 @@ Per-tool packaging is **generated** from `agentry.json` — do not edit it by ha
 - Trae: `.trae-plugin/marketplace.json`.
 
 ```
-python3 scripts/generate_claude.py          # regenerate Claude Code packaging
-python3 scripts/generate_trae.py            # regenerate Trae packaging
-python3 scripts/generate_claude.py --check  # verify up to date (for CI); same flag on generate_trae.py
+python3 scripts/agentry.py generate          # regenerate all packaging (or pass claude/trae)
+python3 scripts/agentry.py generate --check  # verify up to date (for CI)
 ```
 
-Claude Code and Trae have separate plugin specs that happen to overlap for our content: Trae can read Claude's catalog as a fallback, but its own schema differs (e.g. `owner` is a string, not an object), so we ship a native `.trae-plugin/marketplace.json`. Plugin packages also differ — Claude uses a per-plugin `plugin.json`, Trae auto-detects component dirs and uses `traecli.yaml` only for MCP servers, hooks, models, or tool-permissions. Agentry's plugins currently contain only skills and subagents, so no per-plugin manifest is required on Trae. If a plugin later adds MCP/hooks/models, `generate_trae.py` would need to emit a `traecli.yaml` for it.
+Claude Code and Trae have separate plugin specs that happen to overlap for our content: Trae can read Claude's catalog as a fallback, but its own schema differs (e.g. `owner` is a string, not an object), so we ship a native `.trae-plugin/marketplace.json`. Plugin packages also differ — Claude uses a per-plugin `plugin.json`, Trae auto-detects component dirs and uses `traecli.yaml` only for MCP servers, hooks, models, or tool-permissions. Agentry's plugins currently contain only skills and subagents, so no per-plugin manifest is required on Trae. If a plugin later adds MCP/hooks/models, `agentry.py generate` would need to emit a `traecli.yaml` for it.
 
-Adding support for another tool means adding its targets to `scripts/install.py` and, if it has a package format, a generator alongside the existing ones — without changing the canonical manifest.
+Adding support for another tool means adding its targets to `scripts/agentry.py` and, if it has a package format, a generate target alongside the existing ones — without changing the canonical manifest.
 
 ## Versioning
 
@@ -126,4 +128,4 @@ Use [SemVer](https://semver.org) for a plugin's content:
 - **minor** — add a new skill, subagent, or rule to the plugin, or a backward-compatible capability.
 - **major** — remove or rename a component, or otherwise change behavior in a breaking way.
 
-Bump versions by editing `agentry.json`, then regenerate the packaging (`scripts/generate_*.py`).
+Bump versions by editing `agentry.json`, then regenerate the packaging (`python3 scripts/agentry.py generate`).

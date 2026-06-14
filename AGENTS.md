@@ -20,16 +20,14 @@ When changing the extensions or plugin set, follow these steps in order:
 3. **Bump the version.** Follow the Versioning policy in `README.md`: bump the changed plugin's `version` independently (SemVer — patch = fixes, minor = added component, major = removed/renamed/breaking). Bump the top-level `version` only for catalog-level changes (adding/removing a plugin).
 4. **Regenerate packaging.**
    ```bash
-   python3 scripts/generate_claude.py
-   python3 scripts/generate_trae.py
+   python3 scripts/agentry.py generate
    ```
 5. **Update `README.md`.** Keep the plugin/skill list and any affected sections in sync with the change.
 6. **Validate.**
    - For each new/changed skill, subagent, or rule, use the matching `agentry-authoring` skill (`agent-skill-creator`, `subagent-manager`, `rule-manager`, `plugin-manager`); each defines and runs its own validation. Do not reach into a skill's internal scripts directly from here.
    - Confirm the generated packaging is current (also suitable for CI):
      ```bash
-     python3 scripts/generate_claude.py --check
-     python3 scripts/generate_trae.py --check
+     python3 scripts/agentry.py generate --check
      ```
 
 ## Dogfooding
@@ -44,11 +42,11 @@ Keep the source canonical:
 
 - Edit `plugins/` only; the project-local plugins load **from** `plugins/`, so there is no separate copy to maintain.
 - Do **not** install Agentry's own plugins by **copying** their components into `.trae/skills`, `.trae/agents`, `.trae/rules` — that would duplicate the source of truth under `plugins/` and `rules/` and drift. (Committing *external*, third-party skills/agents/rules into `.trae/` is fine — only Agentry's own content must not be copied there.)
-- Rules are not delivered by plugins, so each enabled plugin's rules are activated for this repo by **symlinks** under `.trae/rules/` pointing back to the canonical files under `rules/` (created via `python3 scripts/install.py --tool <tool> --plugin <plugin> --symlink`, which links every rule the plugin references). The symlinks track the canonical source with no copy; do not replace them with copied files.
+- Rules are not delivered by plugins, so each enabled plugin's rules are activated for this repo by **symlinks** under `.trae/rules/` pointing back to the canonical files under `rules/` (created via `python3 scripts/agentry.py install --tool <tool> --plugin <plugin> --symlink`, which links every rule the plugin references). The symlinks track the canonical source with no copy; do not replace them with copied files.
 
 ## Conventions
 
 - Keep extensions tool-agnostic; encode per-tool specifics only in the generators, not in skill/rule content.
-- Rules are not delivered by plugins (no plugin format has a rules component); they install via `scripts/install.py`. Associate each rule with a plugin via that plugin's `rules` array in `agentry.json`. A rule lives once under `rules/` (organized by topic, not by plugin) and may be referenced by more than one plugin — the association is many-to-many, keyed by the rule's path, so never nest rules inside a single plugin. Every rule must currently be referenced by at least one plugin (that reference is also its install handle); a rule referenced by none is unreachable by the installer. For a repo-wide rule with no natural owner, attach it to the most relevant plugin for now — fully standalone rules would need an additive top-level `rules` declaration and a non-plugin install selector, not added yet.
+- Rules are not delivered by plugins (no plugin format has a rules component); they install via `scripts/agentry.py install`. Associate each rule with a plugin via that plugin's `rules` array in `agentry.json`. A rule lives once under `rules/` (organized by topic, not by plugin) and may be referenced by more than one plugin — the association is many-to-many, keyed by the rule's path, so never nest rules inside a single plugin. Every rule must currently be referenced by at least one plugin (that reference is also its install handle); a rule referenced by none is unreachable by the installer. For a repo-wide rule with no natural owner, attach it to the most relevant plugin for now — fully standalone rules would need an additive top-level `rules` declaration and a non-plugin install selector, not added yet.
 - When a reference crosses a plugin boundary, name the other plugin (e.g. "the `agentry-git` plugin").
 - Authoring guidance for skills, subagents, rules, and plugins lives in the `agentry-authoring` plugin's skills — consult the matching skill when creating those.

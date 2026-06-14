@@ -1,29 +1,40 @@
 #!/usr/bin/env python3
-"""Install Agentry extensions into an AI coding tool's directories.
+"""Agentry maintenance CLI: install, status, uninstall, and generate.
 
-Reads the canonical manifest (``agentry.json``) and copies a plugin's components
-into the target tool's directories.
+Reads the canonical manifest (``agentry.json``) — the tool-agnostic source of
+truth — and either installs a plugin's components into an AI coding tool's
+directories or regenerates the per-tool packaging derived from the manifest.
 
-Primary use — install a plugin's rules. Plugin formats for Claude Code and Trae
-have no "rules" component, so rules are not delivered when you install a plugin
-from a marketplace. After installing such a plugin, run this to add its rules
-(the default when no ``--component`` is given).
+Subcommands:
 
-Secondary use — install skills and subagents directly from a checkout (pass
-``--component skills``/``agents``). Useful for development, or for tools without
-marketplace support. Components map to the same plugins as the marketplace.
+- ``install``   — copy or symlink a plugin's components into a tool's dirs.
+- ``status``    — report each item's install state without writing; exit 1 on drift.
+- ``uninstall`` — remove components this tool installed (owned copies/links).
+- ``generate``  — regenerate Claude Code and/or Trae packaging from the manifest.
+
+Install detail. Plugin formats for Claude Code and Trae have no "rules"
+component, so rules are not delivered when you install a plugin from a
+marketplace. After installing such a plugin, run ``install`` to add its rules
+(the default when no ``--component`` is given). Pass ``--component skills``/
+``agents`` to install those directly from a checkout (useful for development, or
+for tools without marketplace support).
 
 Examples:
     # Add a plugin's rules after installing it from a marketplace (rules by default)
-    python3 scripts/install.py --tool claude --plugin agentry-code-quality
-    python3 scripts/install.py --tool trae --plugin agentry-code-quality
+    python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
+    python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality
 
     # Install skills and subagents directly from a checkout
-    python3 scripts/install.py --tool trae --plugin agentry-code-quality \\
+    python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality \\
         --component skills --component agents
 
-    # Preview, at user/global scope
-    python3 scripts/install.py --tool claude --global --dry-run
+    # Report-only check (exit 1 on drift), and removal
+    python3 scripts/agentry.py status --tool claude
+    python3 scripts/agentry.py uninstall --tool trae --plugin agentry-code-quality
+
+    # Regenerate packaging (or verify it in CI)
+    python3 scripts/agentry.py generate
+    python3 scripts/agentry.py generate --check
 """
 
 import argparse
@@ -39,6 +50,9 @@ MANIFEST = REPO_ROOT / "agentry.json"
 PLUGINS_DIR = REPO_ROOT / "plugins"
 RULES_DIR = REPO_ROOT / "rules"
 
+CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
+TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
+
 COMPONENTS = ("skills", "agents", "rules")
 
 # Per-tool target directory for each component, relative to the project root
@@ -49,15 +63,15 @@ TOOL_TARGETS = {
     "trae": {"skills": ".trae/skills", "agents": ".trae/agents", "rules": ".trae/rules"},
 }
 
-# The tool command that updates marketplace-delivered plugins/skills. install.py
-# only manages files it copies/links (rules, and dev-installed skills/agents), so
-# it reminds the user to run this for the parts it cannot see or update.
+# The tool command that updates marketplace-delivered plugins/skills. install
+# only manages files it copies/links (rules, and dev-installed skills/agents),
+# so it reminds the user to run this for the parts it cannot see or update.
 TOOL_MARKETPLACE_UPDATE = {
     "claude": "/plugin marketplace update agentry",
     "trae": "traecli plugin marketplace update agentry",
 }
 
-# Install states for a planned (src -> dest) job.
+# Install states for a planned (src -> dest) job that the installer must act on.
 ACTION_STATES = ("missing", "copied-stale", "stale-link")
 
 # ANSI color codes, applied only when stdout is a TTY and NO_COLOR is unset
@@ -105,14 +119,29 @@ STATE_COLOR = {
 }
 
 
-def load_plugins():
+def resolve_colors(choice):
+    """Map the --color choice to a bool and initialize the color/emoji state."""
+    if choice == "always":
+        use_color = True
+    elif choice == "never":
+        use_color = False
+    else:
+        use_color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+    init_colors(use_color)
+    return use_color
+
+
+def load_manifest():
     try:
-        data = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        return json.loads(MANIFEST.read_text(encoding="utf-8"))
     except FileNotFoundError:
         sys.exit(f"error: manifest not found at {MANIFEST}")
     except json.JSONDecodeError as exc:
         sys.exit(f"error: invalid JSON in {MANIFEST}: {exc}")
-    return data.get("plugins", [])
+
+
+def load_plugins():
+    return load_manifest().get("plugins", [])
 
 
 def select_plugins(plugins, plugin_name):
@@ -352,113 +381,45 @@ def install_one(src, dest, dry_run, force, symlink, quiet=False):
     return "installed"
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Install Agentry skills, agents, and rules into an AI coding tool's directories.",
-    )
-    parser.add_argument(
-        "--tool",
-        choices=sorted(TOOL_TARGETS),
-        help="Target AI coding tool. Optional when running interactively (you will be "
-        "prompted); required otherwise.",
-    )
-    parser.add_argument("--plugin", help="Install only this plugin's components (default: all plugins).")
-    parser.add_argument(
-        "--component",
-        action="append",
-        choices=COMPONENTS,
-        help="Component types to install (repeatable). Default: rules only, since skills "
-        "and subagents are delivered by the plugin marketplace. Pass e.g. "
-        "--component skills to install those directly from a checkout.",
-    )
-    parser.add_argument(
-        "--global",
-        dest="global_scope",
-        action="store_true",
-        help="Install into the user/global dirs instead of the project dirs (default: project).",
-    )
-    parser.add_argument(
-        "--project-dir",
-        type=Path,
-        default=Path.cwd(),
-        help="Project root for project scope (default: current directory).",
-    )
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be copied without writing.")
-    parser.add_argument("--force", action="store_true", help="Overwrite existing files at the destination.")
-    parser.add_argument(
-        "--status",
-        action="store_true",
-        help="Report each item's install state (missing/synced/stale) without writing or "
-        "prompting; exit 1 if anything is missing or stale, else 0. Cannot be combined with "
-        "--yes/--force.",
-    )
-    parser.add_argument(
-        "--yes",
-        "-y",
-        action="store_true",
-        help="Assume yes: install missing and update stale items without prompting "
-        "(non-interactive). By default a bare run prompts per item on a TTY.",
-    )
-    parser.add_argument(
-        "--defaults",
-        action="store_true",
-        help="Skip the interactive selection prompts (plugin/component/symlink) and use "
-        "their defaults (all plugins, rules, copy). Flags you pass still override the default.",
-    )
-    parser.add_argument(
-        "--symlink",
-        action="store_true",
-        help="Symlink components back to this checkout instead of copying, so they track the "
-        "source with no drift. The link target is relative. Not portable to Windows checkouts.",
-    )
-    parser.add_argument(
-        "--color",
-        nargs="?",
-        const="always",
-        choices=("auto", "always", "never"),
-        default="auto",
-        help="Colorize output: omitted is 'auto' (color only on a TTY); a bare --color means "
-        "'always' (force color); --color never disables it. NO_COLOR is honored unless "
-        "--color always is given.",
-    )
-    args = parser.parse_args()
-
-    if args.status and (args.yes or args.force):
-        sys.exit("error: --status is report-only; do not combine with --yes/--force")
-
-    if args.color == "always":
-        use_color = True
-    elif args.color == "never":
-        use_color = False
+def remove_one(dest, dry_run):
+    """Delete an installed dest (symlink, file, or dir tree)."""
+    if dry_run:
+        return
+    if dest.is_symlink() or dest.is_file():
+        dest.unlink()
     else:
-        use_color = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
-    init_colors(use_color)
+        shutil.rmtree(dest)
 
-    all_plugins = load_plugins()
 
+def resolve_selection(args, all_plugins, removing=False):
+    """Resolve tool/plugin/component (and symlink) via prompts when interactive.
+
+    Shared by install/status/uninstall. ``removing`` and ``args.status`` tailor
+    which prompts apply: symlink only affects writes, so it is skipped for both.
+    Returns the components set after resolution.
+    """
     interactive = sys.stdin.isatty() and sys.stdout.isatty()
+    args._interactive = interactive
 
     if args.tool is None:
         if not interactive:
             sys.exit("error: --tool is required when not running interactively")
         args.tool = choose("Which tool?", sorted(TOOL_TARGETS))
 
+    writes = not getattr(args, "status", False) and not removing
+
     # Offer a single shortcut up front: if any selection is still unset and we'd
     # otherwise prompt for each, ask once whether to just use the defaults.
-    # Accepting is equivalent to --defaults. The description mirrors the header
-    # detail format and omits the copy/symlink mode under --status.
-    unset = args.plugin is None or args.component is None or (not args.symlink and not args.status)
+    # Accepting is equivalent to --defaults.
+    unset = args.plugin is None or args.component is None or (writes and not args.symlink)
     if interactive and not args.defaults and unset:
         comps = ", ".join(sorted(args.component)) if args.component else "rules"
         defaults_desc = [f"plugin: {args.plugin or 'all'}", f"components: {comps}"]
-        if not args.status:
+        if writes:
             defaults_desc.append(f"mode: {'symlink' if args.symlink else 'copy'}")
         args.defaults = confirm(f"Use defaults ({' · '.join(defaults_desc)})?", default=True)
 
-    # Selection prompts (plugin/component/symlink) fire interactively unless
-    # --defaults is given, which uses each option's default without asking.
-    # (--yes is separate: it only assumes "yes" to the per-item install/update
-    # confirms below, not to these selection choices.)
+    # Selection prompts fire interactively unless --defaults uses each default.
     ask_optional = interactive and not args.defaults
 
     if args.plugin is None and ask_optional:
@@ -469,37 +430,30 @@ def main():
     if args.component is None and ask_optional:
         args.component = choose("Which components?", ["rules", "skills", "agents"], default="rules", multi=True)
 
-    # Symlink only affects writes, so skip the prompt in report-only --status mode.
-    if not args.symlink and ask_optional and not args.status:
+    if writes and not args.symlink and ask_optional:
         args.symlink = confirm("Symlink instead of copy?", default=False)
 
-    components = set(args.component) if args.component else {"rules"}
-    plugins = select_plugins(all_plugins, args.plugin)
+    return set(args.component) if args.component else {"rules"}
+
+
+def print_header(args, base, components, action):
+    """Print the run header and the per-job report; return (plan, label_width)."""
+    plugins = select_plugins(load_plugins(), args.plugin)
     jobs = plan_copies(plugins, components)
     if not jobs:
-        print("Nothing to install for the given selection.")
-        return
+        print("Nothing to do for the given selection.")
+        return None, None
 
-    base = Path.home() if args.global_scope else args.project_dir.resolve()
-    targets = TOOL_TARGETS[args.tool]
-
-    # First pass: classify and report every planned item.
     scope = "global" if args.global_scope else "project"
     title = ("📦 " if _USE_EMOJI else "") + f"Agentry — {args.tool}, {scope} scope ({base})"
     print(colorize(title, "cyan"))
-    detail = [
-        f"plugin: {args.plugin or 'all'}",
-        f"components: {', '.join(sorted(components))}",
-        f"mode: {'symlink' if args.symlink else 'copy'}",
-    ]
+    detail = [f"plugin: {args.plugin or 'all'}", f"components: {', '.join(sorted(components))}"]
+    if action == "install":
+        detail.append(f"mode: {'symlink' if args.symlink else 'copy'}")
     print(colorize(indent() + " · ".join(detail), "dim"))
     print()
 
-    # Shared width so report tags and action labels share one aligned column.
-    action_labels = ["would install", "would update"] if args.dry_run else (
-        ["linked"] if args.symlink else ["installed", "updated"])
-    label_width = max(len(s) for s in ["missing", "synced", "stale", *action_labels])
-
+    targets = TOOL_TARGETS[args.tool]
     plan = []
     for component, src, rel_dest in jobs:
         if not src.exists():
@@ -510,8 +464,29 @@ def main():
         dest = base / targets[component] / rel_dest
         rel = dest.relative_to(base)
         state = classify_state(src, dest)
-        print(report_line(state, rel, label_width))
         plan.append((component, src, dest, rel, state))
+    return plan, targets
+
+
+def cmd_install(args):
+    """install / status: classify, report, then write (unless --status)."""
+    resolve_colors(args.color)
+    all_plugins = load_plugins()
+    components = resolve_selection(args, all_plugins)
+    interactive = args._interactive
+
+    base = Path.home() if args.global_scope else args.project_dir.resolve()
+    result = print_header(args, base, components, "status" if args.status else "install")
+    if result[0] is None:
+        return 0
+    plan, _ = result
+
+    # Shared width so report tags and action labels share one aligned column.
+    action_labels = ["would install", "would update"] if args.dry_run else (
+        ["linked"] if args.symlink else ["installed", "updated"])
+    label_width = max(len(s) for s in ["missing", "synced", "stale", *action_labels])
+    for _, _, _, rel, state in plan:
+        print(report_line(state, rel, label_width))
 
     counts = {"current": 0, "installed": 0, "updated": 0, "skipped": 0}
     acted = []
@@ -585,15 +560,14 @@ def main():
     current_label = f"{counts['current']} synced"
     if linked:
         current_label += colorize(f" ({linked} linked)", "dim")
-    drift = sum(1 for *_, state in plan if needs_action(state))
     if args.status:
+        drift = sum(1 for *_, state in plan if needs_action(state))
         parts = [colorize(current_label, "green")]
         if drift:
             # Red if any item is stale (the more severe state), else yellow for
             # missing-only — matching the per-row report colors.
             stale = any(state in ("copied-stale", "stale-link") for *_, state in plan)
             parts.append(colorize(f"{drift} need attention", "red" if stale else "yellow"))
-        unresolved = drift > 0
     else:
         iv = "would install" if args.dry_run else "installed"
         uv = "would update" if args.dry_run else "updated"
@@ -604,7 +578,8 @@ def main():
         ]
         if counts["skipped"]:
             parts.append(colorize(f"{counts['skipped']} skipped", "dim"))
-        unresolved = counts["skipped"] > 0
+    unresolved = (args.status and any(needs_action(s) for *_, s in plan)) or \
+        (not args.status and counts["skipped"] > 0)
     # ⚠️ is a narrow (1-cell) emoji vs ✅ (2-cell); pad it so the text aligns.
     mark = ("⚠️  " if unresolved else "✅ ") if _USE_EMOJI else ""
     print(mark + colorize("Summary: ", "cyan") + ", ".join(parts))
@@ -617,6 +592,343 @@ def main():
     if args.status and any(needs_action(state) for *_, state in plan):
         return 1
     return 0
+
+
+def cmd_uninstall(args):
+    """uninstall: remove components this tool installed (owned copies/links)."""
+    resolve_colors(args.color)
+    all_plugins = load_plugins()
+    components = resolve_selection(args, all_plugins, removing=True)
+    interactive = args._interactive
+
+    base = Path.home() if args.global_scope else args.project_dir.resolve()
+    result = print_header(args, base, components, "uninstall")
+    if result[0] is None:
+        return 0
+    plan, _ = result
+
+    action_labels = ["would remove"] if args.dry_run else ["removed"]
+    label_width = max(len(s) for s in ["missing", "synced", "stale", *action_labels])
+    for _, _, _, rel, state in plan:
+        print(report_line(state, rel, label_width))
+
+    counts = {"absent": 0, "removed": 0, "skipped": 0}
+    acted = []
+    first_prompt = True
+    bulk = None
+    for component, src, dest, rel, state in plan:
+        if state == "missing":
+            counts["absent"] += 1
+            continue
+        # We only own items that match the canonical source: 'linked' symlinks
+        # and 'copied-current' copies. Drifted items ('copied-stale',
+        # 'stale-link') may be the user's own edits, so skip unless --force.
+        owned = state in ("linked", "copied-current")
+        if not owned and not args.force:
+            kept = colorize(f"{'kept':<{label_width}}", "yellow")
+            acted.append(
+                f"{indent()}{kept} {rel}" + colorize("  (drifted; use --force to remove)", "dim")
+            )
+            counts["skipped"] += 1
+            continue
+
+        if args.yes or args.force:
+            act = True
+        elif bulk is not None:
+            act = bulk
+        elif interactive and not args.dry_run:
+            if first_prompt:
+                print()
+                first_prompt = False
+            answer = confirm_action(f"{indent()}remove {component} '{rel}'?")
+            if answer in ("all", "none"):
+                bulk = answer == "all"
+                act = bulk
+            else:
+                act = answer == "yes"
+        else:
+            # Non-interactive without --yes: do not delete implicitly.
+            act = False
+
+        if not act:
+            counts["skipped"] += 1
+            continue
+        remove_one(dest, args.dry_run)
+        label = "would remove" if args.dry_run else "removed"
+        acted.append(f"{indent()}{colorize(f'{label:<{label_width}}', 'green')} {rel}")
+        counts["removed"] += 1
+
+    if acted:
+        if first_prompt:
+            print()
+        for line in acted:
+            print(line)
+        print()
+    elif first_prompt:
+        print()
+
+    rv = "would remove" if args.dry_run else "removed"
+    parts = [
+        colorize(f"{counts['removed']} {rv}", "green"),
+        colorize(f"{counts['absent']} absent", "dim"),
+    ]
+    if counts["skipped"]:
+        parts.append(colorize(f"{counts['skipped']} kept", "yellow"))
+    unresolved = counts["skipped"] > 0
+    mark = ("⚠️  " if unresolved else "✅ ") if _USE_EMOJI else ""
+    print(mark + colorize("Summary: ", "cyan") + ", ".join(parts))
+    return 0
+
+
+# ---- generate ---------------------------------------------------------------
+
+def generated_note(tool):
+    return f"GENERATED from agentry.json by 'scripts/agentry.py generate {tool}'. Do not edit by hand."
+
+
+def serialize(data):
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+
+
+def write_or_check(path, content, check, changed):
+    existing = path.read_text(encoding="utf-8") if path.exists() else None
+    if existing == content:
+        return
+    rel = path.relative_to(REPO_ROOT)
+    changed.append(str(rel))
+    if check:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    print(f"wrote: {rel}")
+
+
+def build_claude_marketplace(manifest):
+    catalog = {
+        "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+        "$generated": generated_note("claude"),
+        "name": manifest["name"],
+        "description": manifest.get("description", ""),
+    }
+    if "version" in manifest:
+        catalog["version"] = manifest["version"]
+    catalog["owner"] = manifest.get("owner", {})
+    catalog["metadata"] = {"pluginRoot": "./plugins"}
+    catalog["plugins"] = []
+    for plugin in manifest["plugins"]:
+        entry = {
+            "name": plugin["name"],
+            "source": f"./{plugin['name']}",
+            "description": plugin.get("description", ""),
+        }
+        if "version" in plugin:
+            entry["version"] = plugin["version"]
+        if "category" in plugin:
+            entry["category"] = plugin["category"]
+        if plugin.get("keywords"):
+            entry["keywords"] = plugin["keywords"]
+        catalog["plugins"].append(entry)
+    return catalog
+
+
+def build_claude_plugin_manifest(manifest, plugin):
+    out = {
+        "$generated": generated_note("claude"),
+        "name": plugin["name"],
+        "description": plugin.get("description", ""),
+    }
+    if "version" in plugin:
+        out["version"] = plugin["version"]
+    if "owner" in manifest:
+        out["author"] = manifest["owner"]
+    for key in ("homepage", "repository", "license"):
+        if key in manifest:
+            out[key] = manifest[key]
+    return out
+
+
+def owner_string(manifest):
+    """Trae's owner field is a string; derive it from the manifest owner."""
+    owner = manifest.get("owner")
+    if isinstance(owner, dict):
+        return owner.get("name", "")
+    return owner or ""
+
+
+def build_trae_marketplace(manifest):
+    catalog = {
+        "$generated": generated_note("trae"),
+        "name": manifest["name"],
+        "owner": owner_string(manifest),
+        "plugins": [],
+    }
+    for plugin in manifest["plugins"]:
+        entry = {
+            "name": plugin["name"],
+            "description": plugin.get("description", ""),
+        }
+        if "version" in plugin:
+            entry["version"] = plugin["version"]
+        entry["source"] = f"./plugins/{plugin['name']}"
+        catalog["plugins"].append(entry)
+    return catalog
+
+
+def generate_claude(manifest, check, changed):
+    write_or_check(CLAUDE_MARKETPLACE, serialize(build_claude_marketplace(manifest)), check, changed)
+    for plugin in manifest["plugins"]:
+        path = PLUGINS_DIR / plugin["name"] / ".claude-plugin" / "plugin.json"
+        write_or_check(path, serialize(build_claude_plugin_manifest(manifest, plugin)), check, changed)
+
+
+def generate_trae(manifest, check, changed):
+    write_or_check(TRAE_MARKETPLACE, serialize(build_trae_marketplace(manifest)), check, changed)
+
+
+def cmd_generate(args):
+    """generate: regenerate Claude Code and/or Trae packaging from the manifest."""
+    resolve_colors(args.color)
+    manifest = load_manifest()
+    targets = ("claude", "trae") if args.target == "all" else (args.target,)
+    changed = []
+    for tool in targets:
+        if tool == "claude":
+            generate_claude(manifest, args.check, changed)
+        else:
+            generate_trae(manifest, args.check, changed)
+
+    label = " + ".join(targets) if args.target == "all" else args.target
+    if args.check:
+        if changed:
+            print("Out of date (run 'scripts/agentry.py generate'):")
+            for path in changed:
+                print(f"  {path}")
+            return 1
+        print(f"{label} packaging is up to date.")
+    elif not changed:
+        print("Already up to date.")
+    return 0
+
+
+def add_color_arg(parser):
+    parser.add_argument(
+        "--color",
+        nargs="?",
+        const="always",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="Colorize output: omitted is 'auto' (color only on a TTY); a bare --color means "
+        "'always' (force color); --color never disables it. NO_COLOR is honored unless "
+        "--color always is given.",
+    )
+
+
+def add_selection_args(parser, *, writes):
+    """Add the tool/plugin/component/scope args shared by install/status/uninstall."""
+    parser.add_argument(
+        "--tool",
+        choices=sorted(TOOL_TARGETS),
+        help="Target AI coding tool. Optional when running interactively (you will be "
+        "prompted); required otherwise.",
+    )
+    parser.add_argument("--plugin", help="Act on only this plugin's components (default: all plugins).")
+    parser.add_argument(
+        "--component",
+        action="append",
+        choices=COMPONENTS,
+        help="Component types to act on (repeatable). Default: rules only, since skills "
+        "and subagents are delivered by the plugin marketplace.",
+    )
+    parser.add_argument(
+        "--global",
+        dest="global_scope",
+        action="store_true",
+        help="Use the user/global dirs instead of the project dirs (default: project).",
+    )
+    parser.add_argument(
+        "--project-dir",
+        type=Path,
+        default=Path.cwd(),
+        help="Project root for project scope (default: current directory).",
+    )
+    parser.add_argument(
+        "--defaults",
+        action="store_true",
+        help="Skip the interactive selection prompts (plugin/component"
+        + ("/symlink" if writes else "") + ") and use their defaults. Flags you pass still override.",
+    )
+    add_color_arg(parser)
+
+
+class _SubcommandHelpFormatter(argparse.HelpFormatter):
+    """Drop the redundant metavar pseudo-line above the subcommand list."""
+
+    def _format_action(self, action):
+        parts = super()._format_action(action)
+        if action.nargs == argparse.PARSER:
+            parts = "\n".join(parts.split("\n")[1:])
+        return parts
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="agentry.py",
+        description="Agentry maintenance CLI.",
+        formatter_class=_SubcommandHelpFormatter,
+    )
+    sub = parser.add_subparsers(dest="command", title="commands", metavar="<command>")
+
+    install_help = "Install a plugin's components into a tool's directories."
+    p_install = sub.add_parser("install", help=install_help, description=install_help)
+    add_selection_args(p_install, writes=True)
+    p_install.add_argument("--dry-run", action="store_true", help="Show what would be installed without writing.")
+    p_install.add_argument("--force", action="store_true", help="Overwrite existing files at the destination.")
+    p_install.add_argument(
+        "--yes", "-y", action="store_true",
+        help="Assume yes: install missing and update stale items without prompting.",
+    )
+    p_install.add_argument(
+        "--symlink", action="store_true",
+        help="Symlink components back to this checkout instead of copying, so they track the "
+        "source with no drift. The link target is relative. Not portable to Windows checkouts.",
+    )
+    p_install.set_defaults(func=cmd_install, status=False)
+
+    status_help = "Report each item's install state without writing; exit 1 on drift."
+    p_status = sub.add_parser("status", help=status_help, description=status_help)
+    add_selection_args(p_status, writes=False)
+    p_status.set_defaults(func=cmd_install, status=True, dry_run=False, force=False, yes=False, symlink=False)
+
+    uninstall_help = "Remove components this tool installed."
+    p_uninstall = sub.add_parser("uninstall", help=uninstall_help, description=uninstall_help)
+    add_selection_args(p_uninstall, writes=False)
+    p_uninstall.add_argument("--dry-run", action="store_true", help="Show what would be removed without deleting.")
+    p_uninstall.add_argument(
+        "--force", action="store_true",
+        help="Also remove drifted items (copied-stale/stale-link) that may not be ours.",
+    )
+    p_uninstall.add_argument(
+        "--yes", "-y", action="store_true", help="Assume yes: remove owned items without prompting.")
+    p_uninstall.set_defaults(func=cmd_uninstall, status=False, symlink=False)
+
+    generate_help = "Regenerate per-tool packaging from agentry.json."
+    p_generate = sub.add_parser("generate", help=generate_help, description=generate_help)
+    p_generate.add_argument(
+        "target", nargs="?", choices=("claude", "trae", "all"), default="all", metavar="<target>",
+        help="Which packaging to generate: claude, trae, or all (default: all).",
+    )
+    p_generate.add_argument(
+        "--check", action="store_true",
+        help="Verify generated files are up to date without writing; exit 1 if not.",
+    )
+    add_color_arg(p_generate)
+    p_generate.set_defaults(func=cmd_generate)
+
+    args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return 0
+    return args.func(args)
 
 
 if __name__ == "__main__":

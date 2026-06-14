@@ -1,5 +1,5 @@
 {
-  "$generated": "GENERATED from agentry.json by scripts/generate_claude.py. Do not edit by hand.",
+  "$generated": "GENERATED from agentry.json by 'scripts/agentry.py generate claude'. Do not edit by hand.",
   "name": "agentry-docs",
   "description": "Documentation authoring skills for software projects, starting with creating and maintaining README files following standard conventions.",
   "version": "0.1.0",
