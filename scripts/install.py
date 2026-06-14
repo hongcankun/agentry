@@ -632,4 +632,9 @@ if __name__ == "__main__":
         # (128 + 13) so a closed pipe is not mistaken for a real failure/drift.
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
         code = 141
+    except (KeyboardInterrupt, EOFError):
+        # Cancelled at an interactive prompt (Ctrl-C / Ctrl-D): exit quietly
+        # without a traceback. 130 is the conventional code for SIGINT.
+        print()
+        code = 130
     sys.exit(code)
