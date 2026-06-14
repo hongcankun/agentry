@@ -62,6 +62,14 @@ Keep it to a few lines; do not let it overshadow the agent's actual role.
 - Use a stronger tier (e.g. `opus`) for deep reasoning, architecture, or hard debugging.
 - Use `inherit` to match whatever model the main agent is running.
 
+## Skills and context
+
+A subagent runs in an isolated context: it does **not** inherit the main agent's conversation, loaded rules, or active skills. Whatever the job needs must come from the subagent's own prompt, its tools, or skills it explicitly loads.
+
+- If the subagent's work follows a skill's procedure, declare that skill so it is preloaded into the subagent's context (Claude Code / Trae CLI: a `skills` frontmatter field that injects the full skill content). Do not assume a skill active in the main session carries over.
+- Even when a skill is preloaded, keep the prompt able to stand alone: summarize the essential procedure so the agent still functions if the skill is unavailable. Reference the skill as authoritative, but don't depend on it for basic operation.
+- Do not rely on project rules reaching the subagent; restate any binding constraint (safety, approval, output) directly in the prompt.
+
 ## Scope: project vs. user/global
 
 - **Project scope** (the tool's repo `agents/` dir): version-controlled, shared with the team, project-specific. Takes precedence over a user agent of the same name.

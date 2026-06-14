@@ -105,6 +105,7 @@ Per-tool packaging is **generated** from `agentry.json` — do not edit it by ha
 
 - Claude Code: `.claude-plugin/marketplace.json` and each `plugins/*/.claude-plugin/plugin.json`.
 - Trae: `.trae-plugin/marketplace.json`.
+- Derived skill references: a copy of a canonical rule embedded in a skill's `references/`, declared by a plugin's `skillReferences` map so the reference travels with the (copied) plugin while the rule stays canonical under `rules/`.
 
 ```
 python3 scripts/agentry.py generate          # regenerate all packaging (or pass claude/trae)

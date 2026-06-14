@@ -18,6 +18,7 @@ Use this checklist when reviewing an AI subagent definition file.
 - The system prompt defines role, responsibilities, workflow, and constraints.
 - There is an explicit output contract describing what the agent returns.
 - The prompt is self-contained and does not rely on the main conversation's hidden context.
+- Any skill the subagent's procedure depends on is preloaded (e.g. a `skills` field), not assumed to carry over from the main session; the prompt still stands alone if that skill is unavailable.
 
 ## Scope and access
 

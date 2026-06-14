@@ -785,6 +785,81 @@ def generate_trae(manifest, check, changed):
     write_or_check(TRAE_MARKETPLACE, serialize(build_trae_marketplace(manifest)), check, changed)
 
 
+def strip_frontmatter(text):
+    """Drop a leading YAML frontmatter block (--- ... ---) from rule content.
+
+    A rule's frontmatter carries tool-specific load directives that are
+    meaningless inside a skill reference, so the derived copy embeds the body
+    only. Returns the text unchanged when there is no frontmatter.
+    """
+    if not text.startswith("---\n"):
+        return text
+    end = text.find("\n---\n", 4)
+    if end == -1:
+        return text
+    return text[end + len("\n---\n"):].lstrip("\n")
+
+
+# Paired HTML-comment markers that fence content out of a derived skill
+# reference. Anything between them (inclusive) is dropped by the generator, so a
+# rule can keep maintainer-only prose (e.g. a Related section of ecosystem
+# cross-links) that is meaningless inside a delivered, self-contained skill.
+# HTML comments render invisibly, so the markers do not affect the rule itself.
+EXCLUDE_BEGIN = "<!-- skill-reference:exclude:begin -->"
+EXCLUDE_END = "<!-- skill-reference:exclude:end -->"
+
+
+def strip_excluded_blocks(text):
+    """Remove every ``EXCLUDE_BEGIN``..``EXCLUDE_END`` block from rule content.
+
+    Markers must be paired; an unterminated begin marker is a content error, so
+    fail loudly rather than guess where the block ends. Returns the text
+    unchanged when no markers are present.
+    """
+    while EXCLUDE_BEGIN in text:
+        start = text.index(EXCLUDE_BEGIN)
+        close = text.find(EXCLUDE_END, start)
+        if close == -1:
+            sys.exit(f"error: unterminated '{EXCLUDE_BEGIN}' (missing '{EXCLUDE_END}')")
+        text = text[:start].rstrip("\n") + "\n\n" + text[close + len(EXCLUDE_END):].lstrip("\n")
+    return text.rstrip("\n") + "\n"
+
+
+def build_skill_reference(rule_rel):
+    """Build the derived skill-reference content for a canonical rule path.
+
+    Strips the rule's frontmatter (tool-specific load directives) and any
+    marker-fenced exclude blocks (maintainer-only prose), leaving the portable
+    body, then prepends a note pointing back to the canonical source.
+    """
+    src = RULES_DIR / rule_rel
+    if not src.exists():
+        sys.exit(f"error: skillReferences rule not found: {src}")
+    note = (
+        f"<!-- GENERATED from rules/{rule_rel} by 'scripts/agentry.py generate'. "
+        "Do not edit by hand; edit the canonical rule. -->\n\n"
+    )
+    body = strip_excluded_blocks(strip_frontmatter(src.read_text(encoding="utf-8")))
+    return note + body
+
+
+def generate_skill_references(manifest, check, changed):
+    """Materialize each plugin's skillReferences into the skill's references/.
+
+    The mapping in agentry.json associates a skill with canonical rule paths;
+    this embeds a derived copy so the reference travels with the (copied)
+    plugin, while the rule stays the single source of truth under rules/.
+    """
+    for plugin in manifest["plugins"]:
+        for skill, rules in plugin.get("skillReferences", {}).items():
+            for rule_rel in rules:
+                dest = (
+                    PLUGINS_DIR / plugin["name"] / "skills" / skill
+                    / "references" / Path(rule_rel).name
+                )
+                write_or_check(dest, build_skill_reference(rule_rel), check, changed)
+
+
 def cmd_generate(args):
     """generate: regenerate Claude Code and/or Trae packaging from the manifest."""
     resolve_colors(args.color)
@@ -796,6 +871,9 @@ def cmd_generate(args):
             generate_claude(manifest, args.check, changed)
         else:
             generate_trae(manifest, args.check, changed)
+    # Derived skill references are tool-agnostic (identical content for every
+    # tool), so generate them once regardless of the selected target.
+    generate_skill_references(manifest, args.check, changed)
 
     label = " + ".join(targets) if args.target == "all" else args.target
     if args.check:

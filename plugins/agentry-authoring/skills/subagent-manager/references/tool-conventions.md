@@ -13,6 +13,7 @@ Always detect the target tool from the existing agent directories or config befo
   - `description` (required) — purpose + when to invoke; add "Use PROACTIVELY" / "MUST BE USED" for automatic delegation.
   - `tools` (optional) — comma-separated allowlist. Omit to inherit all tools.
   - `model` (optional) — alias (`sonnet`, `opus`, `haiku`) or `inherit`. Omit for default.
+  - `skills` (optional) — skill IDs to preload into the subagent's context at startup, injecting the full skill content (not just its description). Without it the subagent can still discover and invoke skills via the Skill tool; a skill with `disable-model-invocation: true` cannot be preloaded.
 
 ## Cursor
 

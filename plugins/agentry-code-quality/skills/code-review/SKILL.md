@@ -87,3 +87,4 @@ When the platform supports inline comments (e.g. a PR), map findings to specific
 - `references/review-dimensions.md`: the dimensions to evaluate (correctness, security, error handling, readability, design, performance, testing, docs) with what to look for in each.
 - `references/severity-levels.md`: severity definitions (Critical/High/Medium/Low/Nit), how to classify and communicate findings, and the approve/request-changes/block decision logic.
 - `references/false-positives.md`: the pre-report confidence gate and the common false positives an automated reviewer should not flag.
+- `references/code-style.md`: the project's style standard, underpinning several review dimensions (notably readability, error handling, and design).

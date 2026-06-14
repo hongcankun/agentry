@@ -2,6 +2,8 @@
 
 Evaluate a change across these dimensions. Weight effort toward the areas where the change carries the most risk; not every dimension is relevant to every diff.
 
+`references/code-style.md` is the project's style standard underpinning several dimensions below (notably readability, error handling, and design); enforce a change against it where relevant.
+
 ## Correctness
 
 - The code does what the description/issue says it does.

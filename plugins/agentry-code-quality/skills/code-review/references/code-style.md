@@ -1,9 +1,4 @@
----
-# Trae: always load this rule; description aids intelligent activation.
-# Claude Code: ignores these keys, and loads always since `paths` is omitted.
-description: Code style conventions covering core principles, formatting, naming, structure, idioms, error handling, and comments.
-alwaysApply: true
----
+<!-- GENERATED from rules/code-quality/code-style.md by 'scripts/agentry.py generate'. Do not edit by hand; edit the canonical rule. -->
 
 # Code Style
 
@@ -58,10 +53,3 @@ General code style conventions that apply across projects. Defer to the project'
 - Do not add comments, docstrings, or type annotations to code you did not change.
 - Give modules and non-trivial public functions a concise docstring describing purpose and behavior.
 - Remove dead code rather than commenting it out.
-
-<!-- skill-reference:exclude:begin -->
-## Related
-
-- `agentry-code-quality` plugin — the plugin this rule ships alongside.
-- `code-review` rule and skill — review policy and procedure that enforce these conventions.
-<!-- skill-reference:exclude:end -->
