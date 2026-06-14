@@ -41,7 +41,7 @@
       "name": "agentry-authoring",
       "source": "./agentry-authoring",
       "description": "Authoring skills for building AI agent extensions: create skills, subagents, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "category": "authoring",
       "keywords": [
         "skills",

@@ -1,11 +1,11 @@
 ---
-name: agent-skill-creator
-description: Create and refine Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package. Use when a user asks to create a new skill, turn a repeatable workflow into a reusable skill, or review and fix an existing skill folder.
+name: skill-manager
+description: Create, update, or review Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package. Use when a user asks to create a new skill, turn a repeatable workflow into a reusable skill, extend an existing skill, or review and fix a skill folder.
 ---
 
-# Agent Skill Creator
+# Skill Manager
 
-Create or improve an Agent Skill as a portable folder centered on `SKILL.md`, with optional `scripts/`, `references/`, and `assets/` directories.
+Create, update, or review an Agent Skill: a portable folder centered on `SKILL.md`, with optional `scripts/`, `references/`, and `assets/` directories.
 
 Follow these conventions:
 - Keep the skill lightweight. Put only the core guidance in `SKILL.md`.
@@ -18,6 +18,7 @@ Follow these conventions:
 Use this skill when the task is to:
 - create a new Agent Skill from a request, workflow, or idea;
 - convert repeated manual steps into a reusable skill package;
+- update or extend an existing skill's metadata, instructions, scripts, or references;
 - review or repair an existing skill so it matches the Agent Skills convention.
 
 ## Expected input
@@ -26,7 +27,8 @@ Provide as much of the following as available:
 - the skill goal and target user requests;
 - the workflow, checklist, or domain knowledge the skill should encode;
 - any scripts, templates, examples, or reference documents that should be bundled;
-- whether the task is **new creation** or **review/fix of an existing skill**.
+- existing skill files that should be respected or updated;
+- whether the task is **create**, **update**, or **review**.
 
 If important details are missing, infer reasonable defaults from the user request and keep the skill focused.
 
@@ -47,9 +49,11 @@ Use kebab-case for the skill name directory and metadata `name`.
 
 ## Workflow
 
-### 1. Define the skill boundary
+### 1. Determine the task type and define the skill boundary
 
-Clarify:
+Decide whether you are **creating**, **updating**, or **reviewing** a skill. For an existing skill, locate its folder first and read the current `SKILL.md`.
+
+Then clarify the skill boundary:
 - the job this skill helps an agent accomplish;
 - the concrete capabilities it should provide;
 - the situations that should trigger the skill.
@@ -64,9 +68,9 @@ For a new skill, run:
 python3 scripts/init_skill.py <skill-name> --path <output-directory>
 ```
 
-For an existing skill, inspect the current folder and keep only files that are part of the actual skill package.
+For an existing skill (update or review), inspect the current folder and keep only files that are part of the actual skill package. When updating, preserve unrelated content and edit in place rather than rewriting the whole skill.
 
-### 3. Write `SKILL.md`
+### 3. Write or update `SKILL.md`
 
 Ensure `SKILL.md` contains:
 - YAML frontmatter with `name`, `description`;
@@ -103,7 +107,7 @@ Validation checks for:
 
 ### 6. Review quality before delivery
 
-Check the package against `references/authoring-checklist.md`.
+Check the package against `references/authoring-checklist.md`. For a **review** task, this checklist is the core deliverable: audit the existing skill against every section, report each gap as a concrete finding tied to the file it affects, and either fix it or note the required change.
 
 At minimum confirm:
 - the description is specific and triggerable;

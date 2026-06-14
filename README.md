@@ -78,10 +78,10 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 
 ### [agentry-authoring](./plugins/agentry-authoring)
 
-- **agent-skill-creator** skill: Create and refine Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package.
+- **skill-manager** skill: Create, update, or review Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package.
 - **subagent-manager** skill: Create, update, or review AI subagents across tools like Claude Code, Cursor, OpenCode, Trae CLI, and Codex, including defining the agent's role and trigger conditions, writing a focused system prompt, scoping tools and model, choosing the right scope, and reviewing agents for clarity and overlap.
 - **rule-manager** skill: Create, update, or review agent rules that guide AI agent behavior, at project scope or user/global scope, including defining scope and triggers, writing clear and actionable directives, organizing rule files, and reviewing rules for clarity and conflicts.
-- **prompt-template-creator** skill: Create and refine reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation.
+- **prompt-template-manager** skill: Create, update, or review reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation.
 - **plugin-manager** skill: Create, update, or review plugins and plugin marketplaces for AI coding tools like Claude Code and Trae CLI, including defining a plugin's components, writing the manifest, organizing the layout, assembling a marketplace catalog, and reviewing for validity and overlap.
 
 ### [agentry-docs](./plugins/agentry-docs)
