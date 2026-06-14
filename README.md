@@ -45,13 +45,15 @@ python3 scripts/install.py --tool trae --plugin agentry-code-quality
 
 The script reads `agentry.json` (so rules map to the same plugins as the marketplace) and writes to the tool's rules directory (`.claude/rules/`, `.trae/rules/`). It can also install skills and subagents directly from a checkout — useful for development or tools without marketplace support; see `python3 scripts/install.py --help`.
 
+A bare run is **interactive**: it reports each item's state (missing / synced / stale vs the canonical source), then prompts on a TTY — both for any selection you omitted (`--tool`, `--plugin`, `--component`s, `--symlink`) and before installing or updating each item. Pass `--defaults` to accept the default selections without asking, or `--yes` to auto-confirm the install/update actions. When stdout is not a TTY (CI, piped), it installs missing items and skips stale ones without prompting, then reminds you to run the tool's marketplace update for the plugins/skills it cannot see. Use `--status` for a report-only check that writes nothing and exits 1 if anything is missing or stale — handy for CI.
+
 Add `--symlink` to link components back to the checkout instead of copying, so they track the source with no drift (the link is relative; not portable to Windows checkouts):
 
 ```
 python3 scripts/install.py --tool trae --plugin agentry-code-quality --symlink
 ```
 
-Flags: `--tool {claude,trae}`, `--plugin`, `--component {skills,agents,rules}` (repeatable), `--scope {project,global}`, `--project-dir`, `--symlink`, `--dry-run`, `--force`.
+Flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--component {skills,agents,rules}` (repeatable; default: `rules`), `--symlink` (default: copy), `--global` (default: project scope), `--project-dir`, `--status` (report-only; exit 1 on drift), `--yes`/`-y` (auto-confirm install/update actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
 
 ## Plugins
 
