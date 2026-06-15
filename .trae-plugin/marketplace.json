@@ -10,6 +10,12 @@
       "source": "./plugins/agentry-code-quality"
     },
     {
+      "name": "agentry-security",
+      "description": "Security audit skill that runs a threat-driven review of code: maps the attack surface and trust boundaries, hunts vulnerability classes (injection, auth/authz flaws, SSRF, secrets, weak crypto, and more), rates findings by likelihood and impact, and reports exploit scenarios with concrete remediations.",
+      "version": "0.1.0",
+      "source": "./plugins/agentry-security"
+    },
+    {
       "name": "agentry-git",
       "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
       "version": "0.2.0",

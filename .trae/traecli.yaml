@@ -11,6 +11,10 @@ plugins:
     type: local
     source: "${workspaceFolder}/plugins/agentry-code-quality"
     enabled: true
+  - name: agentry-security
+    type: local
+    source: "${workspaceFolder}/plugins/agentry-security"
+    enabled: true
   - name: agentry-authoring
     type: local
     source: "${workspaceFolder}/plugins/agentry-authoring"

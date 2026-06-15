@@ -14,6 +14,7 @@ Both Claude Code and Trae install Agentry as a plugin marketplace. Each tool rea
 ```
 /plugin marketplace add hongcankun/agentry
 /plugin install agentry-code-quality@agentry
+/plugin install agentry-security@agentry
 /plugin install agentry-git@agentry
 /plugin install agentry-authoring@agentry
 /plugin install agentry-docs@agentry
@@ -26,6 +27,7 @@ Update later with `/plugin marketplace update agentry`.
 ```
 traecli plugin marketplace add hongcankun/agentry
 traecli plugin install agentry-code-quality@agentry
+traecli plugin install agentry-security@agentry
 traecli plugin install agentry-git@agentry
 traecli plugin install agentry-authoring@agentry
 traecli plugin install agentry-docs@agentry
@@ -70,6 +72,10 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **code-reviewer** agent: Reviews code changes for correctness, security, readability, performance, and maintainability, then returns prioritized, actionable feedback. Use proactively after writing or modifying code, or when reviewing a diff, pull request, merge request, commit, branch, or file.
 - **code-quality/code-review** rule: Policy for when code review is required, the gates a change must pass before merging, and approval criteria; defers the review procedure to the `code-review` skill.
 - **code-quality/code-style** rule: Code style conventions covering core principles, formatting, naming, structure, language idioms, error handling, and comments that code should follow.
+
+### [agentry-security](./plugins/agentry-security)
+
+- **security-audit** skill: Perform a focused security audit of code or a codebase — map the attack surface and trust boundaries, hunt for vulnerability classes (injection, auth flaws, SSRF, secrets, weak crypto, and more), rate each finding by likelihood and impact, and report exploit scenarios with concrete remediations. Use when a user asks for a security review, security audit, threat assessment, or vulnerability hunt of code they own or are authorized to test.
 
 ### [agentry-git](./plugins/agentry-git)
 

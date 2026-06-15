@@ -2,7 +2,7 @@
   "$comment": "Canonical, tool-agnostic source of truth for Agentry's extensions and how they group into plugins. Per-tool packaging (e.g. .claude-plugin/, .trae-plugin/) and derived skill references (a plugin's skillReferences embeds a copy of a canonical rule into a skill's references/) are GENERATED from this file by 'scripts/agentry.py generate', and 'scripts/agentry.py install' installs components into a tool's directories from here. Edit this file, not the generated artifacts.",
   "name": "agentry",
   "description": "A collection of reusable extensions for AI coding agents, grouped into plugins.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "owner": {
     "name": "hongcankun"
   },
@@ -20,6 +20,16 @@
       "agents": ["code-reviewer"],
       "rules": ["code-quality/code-review.md", "code-quality/code-style.md"],
       "skillReferences": { "code-review": ["code-quality/code-style.md"] }
+    },
+    {
+      "name": "agentry-security",
+      "description": "Security audit skill that runs a threat-driven review of code: maps the attack surface and trust boundaries, hunts vulnerability classes (injection, auth/authz flaws, SSRF, secrets, weak crypto, and more), rates findings by likelihood and impact, and reports exploit scenarios with concrete remediations.",
+      "version": "0.1.0",
+      "category": "security",
+      "keywords": ["security", "audit", "vulnerability", "threat-model", "appsec"],
+      "skills": ["security-audit"],
+      "agents": [],
+      "rules": []
     },
     {
       "name": "agentry-git",
