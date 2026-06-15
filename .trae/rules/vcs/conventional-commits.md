@@ -1,0 +1,1 @@
+../../../rules/vcs/conventional-commits.md
