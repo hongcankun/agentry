@@ -45,10 +45,19 @@ Keep the source canonical:
 - Do **not** install Agentry's own plugins by **copying** their components into `.trae/skills`, `.trae/agents`, `.trae/rules` — that would duplicate the source of truth under `plugins/` and `rules/` and drift. (Committing *external*, third-party skills/agents/rules into `.trae/` is fine — only Agentry's own content must not be copied there.)
 - Rules are not delivered by plugins, so each enabled plugin's rules are activated for this repo by **symlinks** under `.trae/rules/` pointing back to the canonical files under `rules/` (created via `python3 scripts/agentry.py install --tool <tool> --plugin <plugin> --symlink`, which links every rule the plugin references). The symlinks track the canonical source with no copy; do not replace them with copied files.
 
+## Git workflow
+
+This repo follows a PR-based flow; apply it on top of the `git-workflow` and `conventional-commits` skills:
+
+- Never commit directly to `main`. Land every change via a short-lived feature branch and a pull request.
+- Use Conventional Commits for both commit messages and PR titles.
+- Write the PR body to match `.github/pull_request_template.md`; `gh pr create --body` bypasses the template, so include its sections yourself. Check (`[x]`) each item when satisfied, or when it does not apply append `— N/A: <reason>`; leave a box unchecked only for outstanding work.
+- After a PR merges, switch back to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs (`git fetch --prune`). The remote branch is auto-deleted on merge.
+
 ## Conventions
 
 - Keep extensions tool-agnostic; encode per-tool specifics only in the generators, not in skill/rule content.
 - Rules are not delivered by plugins (no plugin format has a rules component); they install via `scripts/agentry.py install`. Associate each rule with a plugin via that plugin's `rules` array in `agentry.json`. A rule lives once under `rules/` (organized by topic, not by plugin) and may be referenced by more than one plugin — the association is many-to-many, keyed by the rule's path, so never nest rules inside a single plugin. Every rule must currently be referenced by at least one plugin (that reference is also its install handle); a rule referenced by none is unreachable by the installer. For a repo-wide rule with no natural owner, attach it to the most relevant plugin for now — fully standalone rules would need an additive top-level `rules` declaration and a non-plugin install selector, not added yet.
 - When a reference crosses a plugin boundary, name the other plugin (e.g. "the `agentry-git` plugin").
-- A skill stays self-contained: it must not depend on a rule being installed, since rules are not bundled with plugins. When a skill needs a rule's content at hand, embed a generated copy via the plugin's `skillReferences` map (`{ "<skill>": ["<rule path>"] }`); `generate` writes it into the skill's `references/`. The rule stays canonical under `rules/` (and keeps its own `rules`-array association); fence any maintainer-only prose in the rule with the `skill-reference:exclude` markers so it does not leak into the portable copy.
+- A skill stays self-contained: it must not depend on a rule being installed. When a skill needs a rule's content at hand, embed a generated copy via the plugin's `skillReferences` map (`{ "<skill>": ["<rule path>"] }`); `generate` writes it into the skill's `references/`. The rule stays canonical under `rules/` (and keeps its own `rules`-array association); fence any maintainer-only prose in the rule with the `skill-reference:exclude` markers so it does not leak into the portable copy.
 - Authoring guidance for skills, subagents, rules, and plugins lives in the `agentry-authoring` plugin's skills — consult the matching skill when creating those.
