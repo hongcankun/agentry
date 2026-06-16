@@ -24,12 +24,12 @@
     {
       "name": "agentry-security",
       "description": "Security audit skill that runs a threat-driven review of code: maps the attack surface and trust boundaries, hunts vulnerability classes (injection, auth/authz flaws, SSRF, secrets, weak crypto, and more), rates findings by likelihood and impact, and reports exploit scenarios with concrete remediations.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "security",
       "keywords": ["security", "audit", "vulnerability", "threat-model", "appsec"],
       "skills": ["security-audit"],
       "agents": ["security-auditor"],
-      "rules": []
+      "rules": ["security/security-audit.md"]
     },
     {
       "name": "agentry-git",

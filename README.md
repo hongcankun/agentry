@@ -77,6 +77,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 
 - **security-audit** skill: Perform a focused security audit of code or a codebase — map the attack surface and trust boundaries, hunt for vulnerability classes (injection, auth flaws, SSRF, secrets, weak crypto, and more), rate each finding by likelihood and impact, and report exploit scenarios with concrete remediations. Use when a user asks for a security review, security audit, threat assessment, or vulnerability hunt of code they own or are authorized to test.
 - **security-auditor** agent: Runs a threat-driven security audit in an isolated context, following the `security-audit` skill. Use proactively when a change touches security-sensitive code (auth, user input, queries, file/network access, cryptography, secrets, payments), or when asked for a security audit, threat assessment, or vulnerability hunt.
+- **security/security-audit** rule: Policy for when a security audit is required, the gates a change must pass before merging, and approval criteria; defers the audit procedure to the `security-audit` skill.
 
 ### [agentry-git](./plugins/agentry-git)
 
