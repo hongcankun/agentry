@@ -1,0 +1,1 @@
+../../plugins/agentry-code-quality/agents/code-reviewer.md

@@ -1,0 +1,1 @@
+../../plugins/agentry-security/agents/security-auditor.md
