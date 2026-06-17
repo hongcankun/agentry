@@ -12,25 +12,45 @@ Subcommands:
 - ``uninstall`` — remove components this tool installed (owned copies/links).
 - ``generate``  — regenerate Claude Code and/or Trae packaging from the manifest.
 
-Install detail. Plugin formats for Claude Code and Trae have no "rules"
-component, so rules are not delivered when you install a plugin from a
-marketplace. After installing such a plugin, run ``install`` to add its rules
-(the default when no ``--component`` is given). Pass ``--component skills``/
-``agents`` to install those directly from a checkout (useful for development, or
-for tools without marketplace support).
+Delivery channels. Neither tool's plugin format has a "rules" component, so
+rules are never delivered by a marketplace install; ``install`` always copies
+them. Skills/subagents come through one of two channels:
+
+- marketplace — orchestrate the tool's own CLI (``claude``/``traecli``) to add the
+  Agentry marketplace and install the selected plugins. These plugins are
+  user-scoped, so this channel forces ``--global`` (and never writes a tool's
+  project config). Used by default for a ``--global`` run.
+- checkout — copy the ``--component`` selection straight from this checkout and
+  never touch the tool CLI — for development, or tools without marketplace
+  support. Used by default at project scope. ``--source checkout`` forces it, and
+  naming ``--component`` selects it (those files come from the checkout).
+
+Pick a channel explicitly with ``--source {marketplace,checkout}``. Interactively,
+a ``--global`` run defaults to the marketplace channel and does not prompt for
+components; pass ``--source checkout`` (or ``--component``) to copy skills/agents
+from the checkout instead.
+
+``uninstall`` mirrors this: the marketplace channel uninstalls the selected
+plugins via the tool CLI and removes the marketplace only once no Agentry plugin
+remains (to keep or force-remove it otherwise, use the tool's own CLI).
+``status`` reports the marketplace and per-plugin install state read-only, at any
+scope (plugins are user-scoped).
 
 Examples:
-    # Add a plugin's rules after installing it from a marketplace (rules by default)
+    # Global install: add the marketplace + install the plugin, then copy rules
+    python3 scripts/agentry.py install --tool claude --global --plugin agentry-code-quality
+    python3 scripts/agentry.py install --tool trae --global --plugin agentry-code-quality --yes
+
+    # Copy a plugin's rules at project scope (checkout channel, file-only)
     python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
     python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality
 
-    # Install skills and subagents directly from a checkout
-    python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality \\
-        --component skills --component agents
+    # Copy skills and subagents directly from a checkout (--component selects checkout)
+    python3 scripts/agentry.py install --tool trae --component skills --component agents
 
-    # Report-only check (exit 1 on drift), and removal
-    python3 scripts/agentry.py status --tool claude
-    python3 scripts/agentry.py uninstall --tool trae --plugin agentry-code-quality
+    # Report-only check (exit 1 on drift), and global removal
+    python3 scripts/agentry.py status --tool claude --global
+    python3 scripts/agentry.py uninstall --tool trae --global --plugin agentry-code-quality
 
     # Regenerate packaging (or verify it in CI)
     python3 scripts/agentry.py generate
@@ -41,7 +61,9 @@ import argparse
 import filecmp
 import json
 import os
+import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -63,13 +85,10 @@ TOOL_TARGETS = {
     "trae": {"skills": ".trae/skills", "agents": ".trae/agents", "rules": ".trae/rules"},
 }
 
-# The tool command that updates marketplace-delivered plugins/skills. install
-# only manages files it copies/links (rules, and dev-installed skills/agents),
-# so it reminds the user to run this for the parts it cannot see or update.
-TOOL_MARKETPLACE_UPDATE = {
-    "claude": "/plugin marketplace update agentry",
-    "trae": "traecli plugin marketplace update agentry",
-}
+# The CLI binary that manages each tool's plugins/marketplaces. agentry.py shells
+# out to these (no shell) to add the marketplace and install/uninstall plugins
+# when orchestrating; resolved on PATH via shutil.which at call time.
+TOOL_BINARIES = {"claude": "claude", "trae": "traecli"}
 
 # Install states for a planned (src -> dest) job that the installer must act on.
 ACTION_STATES = ("missing", "copied-stale", "stale-link")
@@ -101,6 +120,15 @@ def init_colors(enabled):
 def colorize(text, color):
     code = _COLORS[color]
     return f"{code}{text}{_COLORS['reset']}" if code else text
+
+
+def _strip_color(text):
+    """Remove ANSI color escape sequences from ``text``.
+
+    Used when probing a pre-formatted row for its tag (e.g. in the
+    Summary counter).
+    """
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
 
 
 def indent():
@@ -248,6 +276,85 @@ def report_line(state, rel, width):
     return line
 
 
+# Color per outcome tag used in the marketplace/plugin section, so its rows read
+# with the same vocabulary as the file report: green = present/done/intended,
+# yellow = absent/skipped/unknown, red = failed. The "would …" tags are the
+# dry-run previews, mirroring the file report's "would install"/"would remove".
+PLUGIN_TAG_COLOR = {
+    "added": "green",
+    "installed": "green",
+    "removed": "green",
+    "would add": "green",
+    "would install": "green",
+    "would remove": "green",
+    "missing": "yellow",
+    "absent": "yellow",
+    "skipped": "yellow",
+    "kept": "yellow",
+    "unknown": "yellow",
+    "failed": "red",
+}
+
+
+def plugin_row(tag, name, width=None, note=None):
+    """Aligned, colored row for the marketplace/plugin section.
+
+    Mirrors ``report_line`` so plugin rows read like file rows: a padded
+    color tag, the entity name, then an optional dim note. ``width`` is the
+    tag-column width; when omitted it is sized to the longest state-phase
+    tag (``unknown`` / ``missing`` / ``installed`` / …), which is all most
+    call sites need. Action-phase call sites (the "Changes" block) pass a
+    shared width so plugin and file action rows line up. Pad before
+    coloring so ANSI codes do not throw off alignment.
+    """
+    if width is None:
+        width = max(len(t) for t in (
+            "unknown", "missing", "absent", "added", "installed", "removed",
+            "kept", "skipped", "failed",
+        ))
+    cell = colorize(f"{tag:<{width}}", PLUGIN_TAG_COLOR.get(tag, "cyan"))
+    line = f"{indent()}{cell} {name}"
+    if note:
+        line += colorize(f"  ({note})", "dim")
+    return line
+
+
+def plugin_section_header():
+    """Print the cyan section header shared by the marketplace/plugin reports.
+
+    The tool name is already shown in the run header above, so it is omitted here.
+    """
+    print(colorize(f"{indent()}Plugins", "cyan"))
+
+
+# Display title for each component's file section, mirroring the "Plugins"
+# header so the report reads as symmetric, labeled groups.
+COMPONENT_TITLE = {"rules": "Rules", "skills": "Skills", "agents": "Agents"}
+
+
+def print_grouped_report(plan, label_width):
+    """Print the file report rows grouped under a cyan per-component header.
+
+    ``plan`` rows are ``(component, src, dest, rel, state)``. Groups preserve the
+    fixed COMPONENT order and are separated by a blank line, mirroring the
+    "Plugins" section so every part of the report is a labeled group.
+    """
+    by_component = {}
+    for row in plan:
+        by_component.setdefault(row[0], []).append(row)
+    first = True
+    for component in COMPONENTS:
+        rows = by_component.get(component)
+        if not rows:
+            continue
+        if not first:
+            print()
+        first = False
+        print(colorize(f"{indent()}{COMPONENT_TITLE[component]}", "cyan"))
+        for _, _, _, rel, state in rows:
+            print(report_line(state, rel, label_width))
+
+
 def confirm(question, default):
     """Prompt y/n on a TTY. Callers must only invoke this when interactive.
 
@@ -391,12 +498,453 @@ def remove_one(dest, dry_run):
         shutil.rmtree(dest)
 
 
-def resolve_selection(args, all_plugins, removing=False):
+# ---- plugin orchestration ---------------------------------------------------
+#
+# On the marketplace channel, install/uninstall additionally drive the tool's
+# own CLI (claude / traecli) to add the marketplace and install/remove plugins —
+# the parts no plugin format delivers as files. These helpers derive the
+# marketplace identity from the manifest, shell out without a shell, and parse
+# the tools' (brittle) text output defensively so a parse miss never deletes.
+
+
+def derive_marketplace_source(manifest):
+    """Return the ``owner/repo`` marketplace source derived from the manifest.
+
+    Prefers the ``repository`` URL (strips a host prefix and a trailing ``.git``);
+    falls back to ``<owner>/<name>``. Fails loudly if neither yields ``owner/repo``.
+    """
+    repo = manifest.get("repository", "")
+    if repo:
+        path = repo.split("github.com/", 1)[-1].rstrip("/")
+        if path.endswith(".git"):
+            path = path[: -len(".git")]
+        if path.count("/") == 1 and all(path.split("/")):
+            return path
+    owner = owner_string(manifest)
+    name = manifest.get("name", "")
+    if owner and name:
+        return f"{owner}/{name}"
+    sys.exit("error: cannot derive marketplace source from agentry.json (need 'repository' or 'owner' + 'name')")
+
+
+def marketplace_name(manifest):
+    return manifest["name"]
+
+
+def plugin_ref(plugin_name, mkt_name):
+    return f"{plugin_name}@{mkt_name}"
+
+
+def agentry_plugin_names(manifest):
+    return {p["name"] for p in manifest.get("plugins", [])}
+
+
+def resolve_tool_binary(tool):
+    """Return the tool's CLI binary path on PATH, or None if not found."""
+    return shutil.which(TOOL_BINARIES[tool])
+
+
+def run_tool_command(binary, cmd_args, dry_run, capture=False):
+    """Run ``binary cmd_args`` without a shell. Return (ok, stdout, stderr).
+
+    On --dry-run, skip execution and return ok=True without output; the caller
+    prints an aligned "would …" preview row instead of the raw command. Never
+    raises on a non-zero exit or a missing binary: the caller turns ok=False into
+    a finding so a CLI failure cannot abort the file-handling step.
+    """
+    if dry_run:
+        return True, "", ""
+    argv = [binary, *cmd_args]
+    try:
+        proc = subprocess.run(argv, capture_output=capture, text=True, check=False)
+    except (FileNotFoundError, OSError) as exc:
+        return False, "", str(exc)
+    return proc.returncode == 0, proc.stdout or "", proc.stderr or ""
+
+
+def _parse_list_names(text):
+    """Yield top-level entry names from a ``plugin list``/``marketplace list`` dump.
+
+    Entry lines are non-indented and begin with a status glyph (✓/✗); detail lines
+    are indented and skipped. Defensive: unexpected lines are ignored so a format
+    drift degrades to "not present" rather than raising.
+    """
+    names = set()
+    for raw in text.splitlines():
+        if not raw.strip() or raw[:1].isspace():
+            continue  # blank or indented detail line
+        stripped = raw.strip()
+        first = stripped.split(None, 1)[0]
+        if first in ("✓", "✗"):
+            rest = stripped[len(first):].strip()
+            if rest:
+                names.add(rest.split()[0])
+    return names
+
+
+def _parse_plugin_origins(text):
+    """Yield ``(name, origin)`` pairs from a ``plugin list`` dump.
+
+    Plugin entries are introduced by a non-indented line starting with
+    ``✓``/``✗`` followed by the plugin name. Immediately after (on any
+    non-empty subsequent line starting with ``From``) is the origin:
+    ``From local: <path>`` / ``From tar: <url>`` /
+    ``From marketplace: <marketplace name> …``. ``From`` is followed by
+    the origin token (up to the first colon); the token is lowered and
+    returned as the origin. A plugin with no ``From`` line is skipped
+    (callers treat absence as "not installed").
+    """
+    current = None
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        first = stripped.split(None, 1)[0]
+        if first in ("✓", "✗"):
+            rest = stripped[len(first):].strip()
+            current = rest.split()[0] if rest else None
+            continue
+        if stripped.lower().startswith("from ") and current is not None:
+            rest = stripped.split(None, 1)[1]
+            origin_value = rest.split(":", 1)[0].strip().lower()
+            if origin_value in ("local", "tar", "marketplace"):
+                origin = origin_value
+            else:
+                origin = "marketplace"
+            yield current, origin
+            current = None
+
+
+def parse_installed_plugins(text):
+    """Parse ``plugin list`` output into ``{name: origin_type}``.
+
+    ``origin_type`` is one of ``local`` / ``marketplace`` / ``tar``.
+    Callers can still test membership with ``name in installed`` (dict
+    key lookup).
+    """
+    return dict(_parse_plugin_origins(text))
+
+
+def parse_marketplaces(text):
+    """Parse ``marketplace list`` output into a set of marketplace names."""
+    return _parse_list_names(text)
+
+
+def build_install_args(tool, ref, assume_yes):
+    """Per-tool ``plugin install`` argv tail. trae takes --yes; claude --scope user.
+
+    claude's install (unlike its uninstall/remove — see removal_confirm_flags) has
+    no --yes and does not prompt for confirmation, so none is added; it installs at
+    --scope user, matching the marketplace channel's user scope.
+    """
+    args = ["plugin", "install", ref]
+    if tool == "trae" and assume_yes:
+        args.append("--yes")
+    elif tool == "claude":
+        args += ["--scope", "user"]
+    return args
+
+
+def removal_confirm_flags(tool):
+    """Non-interactive confirm flags for ``plugin uninstall`` / ``marketplace remove``.
+
+    Once orchestrate_confirm has approved a removal, claude's uninstall/remove
+    still abort on a non-TTY stdin/stdout unless ``--yes`` is passed, so add it.
+    trae's removal commands take no such flag (they do not prompt), so add none.
+    """
+    return ["--yes"] if tool == "claude" else []
+
+
+def query_marketplaces(binary):
+    """Return (ok, names). ok is False when the CLI call failed (vs. genuinely empty)."""
+    ok, out, _ = run_tool_command(binary, ["plugin", "marketplace", "list"], dry_run=False, capture=True)
+    return ok, (parse_marketplaces(out) if ok else set())
+
+
+def query_installed_plugins(binary):
+    """Return (ok, names). ok is False when the CLI call failed (vs. genuinely empty)."""
+    ok, out, _ = run_tool_command(binary, ["plugin", "list"], dry_run=False, capture=True)
+    return ok, (parse_installed_plugins(out) if ok else set())
+
+
+def orchestrate_confirm(question, args, interactive, bulk=None):
+    """Confirm a mutating CLI action, honoring --yes, --dry-run, and bulk.
+
+    Returns True to proceed, and (as a side effect) may mutate ``bulk`` in the
+    caller's scope via a shared mutable container — so callers pass
+    ``bulk={'value': None}`` rather than a plain bool, and after the user
+    types ``a``/``all`` or ``q``/``none`` every subsequent call short-circuits
+    on that stored answer. This lets a single ``a``/``q`` answer cover every
+    plugin (and the marketplace) in a phase, mirroring the file-loop's bulk
+    semantics. ``--yes`` and ``--dry-run`` always short-circuit immediately.
+    """
+    if args.yes or args.force or args.dry_run:
+        return True
+    if bulk is not None and bulk["value"] is not None:
+        return bulk["value"]
+    if not interactive:
+        return False
+    # Interactive: use confirm_action so the user can pick "all" / "none" and
+    # have it stick for the rest of the phase.
+    answer = confirm_action(question)
+    if answer in ("all", "none"):
+        if bulk is not None:
+            bulk["value"] = answer == "all"
+        return answer == "all"
+    return answer == "yes"
+
+
+# Plugin orchestration is split into two phases, mirroring the file flow:
+#
+#   Phase 1 (report_plugin_state)   — query and print current-state rows under
+#                                     the "Plugins" header. No prompts, no CLI
+#                                     mutations. Runs for every channel and every
+#                                     command (install/uninstall/status) so the
+#                                     report always describes the world as it
+#                                     stands before any action.
+#
+#   Phase 2 (act_on_plugins_install / act_on_plugins_uninstall) — prompt and
+#                                     execute, returning (unresolved_count,
+#                                     action_rows). ``action_rows`` are printed
+#                                     later under the "Changes" section; the
+#                                     caller is responsible for the section
+#                                     header. Dry-run emits "would …" labels
+#                                     instead of "installed"/"removed".
+#
+# This separation keeps the report consistent: every run shows state first,
+# then (optionally) what changed, then a summary. It also avoids dangling
+# headers above slow CLI queries and makes dry-run previews use the same
+# aligned row format as real actions.
+
+def report_plugin_state(args, manifest, plugins, label_width=None):
+    """Phase 1: print a "Plugins" section describing current state (read-only).
+
+    Used by install, uninstall, and status. ``label_width`` is the shared
+    tag-column width; when provided, plugin rows line up with the file rows
+    rendered elsewhere in the same report. Returns a snapshot ``dict`` with
+    ``binary`` (or ``None``), ``markets`` (set), ``installed`` (set), and
+    their two ``*_ok`` flags — the same values the action phase needs, so a
+    second round-trip to the tool CLI is avoided. Query results are gathered
+    before the cyan ``Plugins`` header prints, so a slow CLI call never
+    leaves a dangling header.
+    """
+    mkt = marketplace_name(manifest)
+    binary = resolve_tool_binary(args.tool)
+    snapshot = {"binary": binary, "markets": set(), "installed": {}, "mkt_ok": False, "list_ok": False}
+    if binary is None:
+        plugin_section_header()
+        print(plugin_row("unknown", f"marketplace {mkt}", width=label_width, note=f"{TOOL_BINARIES[args.tool]} not on PATH"))
+        for plugin in plugins:
+            print(plugin_row("unknown", plugin["name"], width=label_width, note="cannot query"))
+        return snapshot
+    mkt_ok, markets = query_marketplaces(binary)
+    list_ok, installed = query_installed_plugins(binary)
+    snapshot.update({"markets": markets, "installed": installed, "mkt_ok": mkt_ok, "list_ok": list_ok})
+    plugin_section_header()
+    if not mkt_ok:
+        print(plugin_row("unknown", f"marketplace {mkt}", width=label_width, note="query failed"))
+    else:
+        print(plugin_row("added" if mkt in markets else "missing", f"marketplace {mkt}", width=label_width, note="marketplace" if mkt in markets else None))
+    for plugin in plugins:
+        name = plugin["name"]
+        if not list_ok:
+            print(plugin_row("unknown", name, width=label_width, note="query failed"))
+        elif name in installed:
+            print(plugin_row("installed", name, width=label_width, note=installed.get(name) or "unknown"))
+        else:
+            print(plugin_row("missing", name, width=label_width, note="not installed"))
+    return snapshot
+
+
+def act_on_plugins_install(args, manifest, plugins, interactive, action_width, state=None, bulk=None):
+    """Phase 2 (install): prompt and execute marketplace + plugin installs.
+
+    Returns ``(unresolved_count, action_rows)``. ``action_rows`` are pre-formatted
+    aligned lines suitable for the "Changes" section (no header is printed here).
+    ``action_width`` is the shared tag-column width so rows line up with file
+    actions in the same section. Never exits on CLI error — a failed command
+    becomes a "failed" row and increments the unresolved count (the caller folds
+    it into the run's final verdict). ``state`` is the ``report_plugin_state``
+    snapshot; when provided, it replaces the two list queries (saving one
+    tool CLI round-trip each). ``bulk`` lets the caller carry over a file-loop
+    "all"/"none" decision (``True``/``False``) so the user isn't re-prompted for
+    every plugin after committing to all files.
+    """
+    if state is not None:
+        binary = state["binary"]
+        present = state["markets"]
+        installed = state["installed"]
+    else:
+        binary = resolve_tool_binary(args.tool)
+        if binary is None:
+            return len(plugins) + 1, []
+        _, present = query_marketplaces(binary)
+        _, installed = query_installed_plugins(binary)
+    if binary is None:
+        return len(plugins) + 1, []
+    source = derive_marketplace_source(manifest)
+    mkt = marketplace_name(manifest)
+    unresolved = 0
+    rows = []
+
+    # Marketplace: add if not present.
+    ready = mkt in present
+    if not ready:
+        if orchestrate_confirm(f"{indent()}add marketplace '{mkt}' ({source})?", args, interactive, bulk=bulk):
+            ok, _, err = run_tool_command(binary, ["plugin", "marketplace", "add", source], args.dry_run)
+            if ok:
+                label = "would add" if args.dry_run else "added"
+                rows.append(plugin_row(label, f"marketplace {mkt}", action_width, source if not args.dry_run else None))
+            else:
+                unresolved += 1
+                rows.append(plugin_row("failed", f"marketplace {mkt}", action_width, err.strip() or "unknown error"))
+        else:
+            unresolved += 1
+            rows.append(plugin_row("skipped", f"marketplace {mkt}", action_width, "declined"))
+            ready = False  # block plugin installs below; same semantics as failure
+
+    if not ready and mkt not in present:
+        # Marketplace is genuinely not ready — surface one line per plugin so
+        # the caller's "acted" count reflects the intended scope.
+        for plugin in plugins:
+            unresolved += 1
+            rows.append(plugin_row("skipped", plugin["name"], action_width, "marketplace not ready"))
+        return unresolved, rows
+
+    # Plugin installs.
+    for plugin in plugins:
+        name = plugin["name"]
+        # --force acts on every plugin (mirrors the file step), reinstalling an
+        # already-installed plugin. It does not bypass the confirm below — that
+        # gate is governed only by --yes.
+        if name in installed and not args.force:
+            continue  # already installed: no state change, no Changes row
+        ref = plugin_ref(name, mkt)
+        if not orchestrate_confirm(f"{indent()}install plugin '{ref}'?", args, interactive, bulk=bulk):
+            unresolved += 1
+            rows.append(plugin_row("skipped", name, action_width, "declined"))
+            continue
+        # Confirm already passed, so tell trae's install not to prompt again.
+        ok, _, err = run_tool_command(binary, build_install_args(args.tool, ref, assume_yes=True), args.dry_run)
+        if ok:
+            label = "would install" if args.dry_run else "installed"
+            rows.append(plugin_row(label, name, action_width))
+        else:
+            unresolved += 1
+            rows.append(plugin_row("failed", name, action_width, err.strip() or "unknown error"))
+    return unresolved, rows
+
+
+def act_on_plugins_uninstall(args, manifest, plugins, interactive, action_width, state=None, bulk=None):
+    """Phase 2 (uninstall): prompt and execute plugin + marketplace removal.
+
+    Same return contract as ``act_on_plugins_install``:
+    ``(unresolved_count, action_rows)``. ``state`` is the
+    ``report_plugin_state`` snapshot; when provided, the "what remains"
+    check uses it instead of re-querying, and the post-action re-query is
+    skipped entirely (both the `installed - removed` is correct since only
+    this function's removals ran in between). ``bulk`` carries over a
+    file-loop "all"/"none" decision so the user isn't re-prompted for
+    every plugin.
+    """
+    if state is not None:
+        binary = state["binary"]
+        list_ok = state["list_ok"]
+        installed = set(state["installed"])
+    else:
+        binary = resolve_tool_binary(args.tool)
+        if binary is None:
+            return len(plugins) + 1, []
+        list_ok, installed = query_installed_plugins(binary)
+    if binary is None:
+        return len(plugins) + 1, []
+    mkt = marketplace_name(manifest)
+    unresolved = 0
+    rows = []
+
+    removed = set()
+    for plugin in plugins:
+        name = plugin["name"]
+        if list_ok and name not in installed:
+            continue  # absent: no state change, no Changes row
+        if not orchestrate_confirm(f"{indent()}uninstall plugin '{name}'?", args, interactive, bulk=bulk):
+            unresolved += 1
+            rows.append(plugin_row("skipped", name, action_width, "declined"))
+            continue
+        ok, _, err = run_tool_command(
+            binary,
+            ["plugin", "uninstall", name] + removal_confirm_flags(args.tool),
+            args.dry_run,
+        )
+        if ok:
+            removed.add(name)
+            label = "would remove" if args.dry_run else "removed"
+            rows.append(plugin_row(label, name, action_width))
+        else:
+            unresolved += 1
+            rows.append(plugin_row("failed", name, action_width, err.strip() or "unknown error"))
+
+    # Marketplace removal: only when no Agentry plugin remains.
+    remaining_ok, remaining = list_ok, (installed - removed) & agentry_plugin_names(manifest)
+    if not remaining_ok:
+        unresolved += 1
+        rows.append(plugin_row("kept", f"marketplace {mkt}", action_width, "could not verify remaining plugins"))
+    elif remaining:
+        rows.append(plugin_row("kept", f"marketplace {mkt}", action_width,
+                               f"{len(remaining)} Agentry plugin(s) still installed"))
+    elif orchestrate_confirm(f"{indent()}no Agentry plugins remain; remove marketplace '{mkt}'?", args, interactive, bulk=bulk):
+        ok, _, err = run_tool_command(
+            binary,
+            ["plugin", "marketplace", "remove", mkt] + removal_confirm_flags(args.tool),
+            args.dry_run,
+        )
+        if ok:
+            label = "would remove" if args.dry_run else "removed"
+            rows.append(plugin_row(label, f"marketplace {mkt}", action_width, "no Agentry plugins remain"))
+        else:
+            unresolved += 1
+            rows.append(plugin_row("failed", f"marketplace {mkt}", action_width, err.strip() or "unknown error"))
+    else:
+        unresolved += 1
+        rows.append(plugin_row("kept", f"marketplace {mkt}", action_width, "declined"))
+    return unresolved, rows
+
+
+def resolve_marketplace(args):
+    """Decide the delivery channel from the command line. Returns True for marketplace.
+
+    Two channels deliver a plugin's skills/subagents: the marketplace (the tool's
+    own plugin system) and the checkout (copied from this repo). Rules are copied
+    in either. ``--source`` picks one explicitly; otherwise naming ``--component``
+    implies checkout (those files come from the checkout), and failing that a
+    ``--global`` run uses the marketplace while a project-scope run uses the
+    checkout. Marketplace plugins are inherently user-scoped, so that channel
+    forces ``--global`` (its rules follow to the user dirs). ``--source marketplace``
+    therefore cannot be combined with an explicit ``--component``. Decided before
+    any interactive prompt, so the component prompt can be skipped on the
+    marketplace channel.
+    """
+    if args.source == "marketplace" and args.component is not None:
+        sys.exit(
+            "error: --source marketplace installs plugins via the tool CLI; it cannot copy "
+            "--component files. Use '--source checkout' (or drop --source) to copy components."
+        )
+    if args.source is not None:
+        marketplace = args.source == "marketplace"
+    else:
+        marketplace = args.component is None and args.global_scope
+    if marketplace:
+        args.global_scope = True  # marketplace plugins are user-scoped; rules follow
+    return marketplace
+
+
+def resolve_selection(args, all_plugins, marketplace, removing=False):
     """Resolve tool/plugin/component (and symlink) via prompts when interactive.
 
     Shared by install/status/uninstall. ``removing`` and ``args.status`` tailor
     which prompts apply: symlink only affects writes, so it is skipped for both.
-    Returns the components set after resolution.
+    On the marketplace channel components do not apply (the tool delivers them),
+    so that prompt is skipped and only rules are copied. Returns the components set.
     """
     interactive = sys.stdin.isatty() and sys.stdout.isatty()
     args._interactive = interactive
@@ -408,10 +956,17 @@ def resolve_selection(args, all_plugins, removing=False):
 
     writes = not getattr(args, "status", False) and not removing
 
+    # On the marketplace channel, components do not apply to a *write* (the tool
+    # delivers skills/agents; only rules are copied), so never prompt for them —
+    # pin to rules and exclude them from the "use defaults?" shortcut below.
+    # status is read-only: components only pick which file types it reports, so
+    # it stays promptable on either channel.
+    component_unset = args.component is None and (not marketplace or getattr(args, "status", False))
+
     # Offer a single shortcut up front: if any selection is still unset and we'd
     # otherwise prompt for each, ask once whether to just use the defaults.
     # Accepting is equivalent to --defaults.
-    unset = args.plugin is None or args.component is None or (writes and not args.symlink)
+    unset = args.plugin is None or component_unset or (writes and not args.symlink)
     if interactive and not args.defaults and unset:
         comps = ", ".join(sorted(args.component)) if args.component else "rules"
         defaults_desc = [f"plugin: {args.plugin or 'all'}", f"components: {comps}"]
@@ -427,7 +982,7 @@ def resolve_selection(args, all_plugins, removing=False):
         if picked != "all":
             args.plugin = picked
 
-    if args.component is None and ask_optional:
+    if component_unset and ask_optional:
         args.component = choose("Which components?", ["rules", "skills", "agents"], default="rules", multi=True)
 
     if writes and not args.symlink and ask_optional:
@@ -436,103 +991,174 @@ def resolve_selection(args, all_plugins, removing=False):
     return set(args.component) if args.component else {"rules"}
 
 
-def print_header(args, base, components, action):
-    """Print the run header and the per-job report; return (plan, label_width)."""
-    plugins = select_plugins(load_plugins(), args.plugin)
-    jobs = plan_copies(plugins, components)
-    if not jobs:
-        print("Nothing to do for the given selection.")
-        return None, None
+def print_header(args, base, components, action, section=None, channel=None):
+    """Print the run header, the plugin-state section, and plan the file jobs.
 
+    ``section`` is an optional callback that renders the plugin/marketplace
+    state block (the "Plugins" section) after the title line. It is called
+    with a single ``label_width`` argument — the shared tag-column width used
+    for every report row in the run, so plugin rows line up with file rows.
+    The header and section are printed first so the section still renders
+    when there are no file jobs (e.g. a rules-less plugin on the marketplace
+    channel, whose work is the section). ``channel`` is the resolved delivery
+    channel ("marketplace"/"checkout"); omitted for read-only status.
+
+    Returns ``(plan, label_width)``. ``plan`` is the list of file rows as
+    ``(component, src, dest, rel, state)``; ``label_width`` is the
+    shared tag-column width to use when rendering grouped-report rows and
+    action rows later.
+    """
     scope = "global" if args.global_scope else "project"
     title = ("📦 " if _USE_EMOJI else "") + f"Agentry — {args.tool}, {scope} scope ({base})"
     print(colorize(title, "cyan"))
     detail = [f"plugin: {args.plugin or 'all'}", f"components: {', '.join(sorted(components))}"]
+    if channel is not None:
+        detail.append(f"source: {channel}")
     if action == "install":
         detail.append(f"mode: {'symlink' if args.symlink else 'copy'}")
     print(colorize(indent() + " · ".join(detail), "dim"))
     print()
+
+    # Compute the shared tag-column width once, up front. State-phase tags
+    # (missing/synced/stale for files; added/installed/missing/unknown/absent/
+    # kept/skipped/failed for plugins) plus the action-phase labels this run
+    # will emit (would install/would update/linked for install; would remove/
+    # removed for uninstall) together drive the width. This means rows in
+    # the Plugins block, each grouped file block, and the shared Changes
+    # block all line up on the same column.
+    if action == "install":
+        file_action_labels = (
+            ["would install", "would update"] if args.dry_run else (
+                ["linked"] if args.symlink else ["installed", "updated"]
+            )
+        )
+    else:
+        file_action_labels = ["would remove"] if args.dry_run else ["removed"]
+    all_labels = set(file_action_labels) | {
+        # file report tags
+        "missing", "synced", "stale",
+        # plugin report tags (state + action)
+        "unknown", "added", "installed", "missing", "absent",
+        "kept", "skipped", "failed",
+        # plugin action-phase dry-run labels
+        "would add", "would install", "would remove", "removed",
+    }
+    label_width = max(len(t) for t in all_labels)
+
+    if section is not None:
+        section(label_width)
+        print()
+
+    plugins = select_plugins(load_plugins(), args.plugin)
+    jobs = plan_copies(plugins, components)
+    if not jobs:
+        # Report the plugin state (via section, above) first, then tell the
+        # user there are no file components to copy. Callers must still run
+        # the plugin action phase when appropriate (marketplace channel), so
+        # return an empty plan rather than None so callers don't early-return.
+        print(colorize(indent() + "No files for the given selection.", "dim"))
+        return [], label_width
 
     targets = TOOL_TARGETS[args.tool]
     plan = []
     for component, src, rel_dest in jobs:
         if not src.exists():
             sys.exit(f"error: source missing: {src}")
-        # Do not resolve() the full path: if dest is already a symlink into the
-        # source tree, resolving would point operations (e.g. unlink) at the
-        # source itself. base is already absolute.
         dest = base / targets[component] / rel_dest
         rel = dest.relative_to(base)
         state = classify_state(src, dest)
         plan.append((component, src, dest, rel, state))
-    return plan, targets
+    return plan, label_width
 
 
 def cmd_install(args):
     """install / status: classify, report, then write (unless --status)."""
     resolve_colors(args.color)
     all_plugins = load_plugins()
-    components = resolve_selection(args, all_plugins)
+    marketplace = resolve_marketplace(args)
+    components = resolve_selection(args, all_plugins, marketplace)
     interactive = args._interactive
 
-    base = Path.home() if args.global_scope else args.project_dir.resolve()
-    result = print_header(args, base, components, "status" if args.status else "install")
-    if result[0] is None:
-        return 0
-    plan, _ = result
+    # Two-phase plugin section: state (rendered inside print_header as the
+    # "Plugins" report block), then action rows merged into the shared
+    # "Changes" section after the file action loop. On the checkout channel,
+    # no plugin actions run (skills/agents come from the checkout), so the
+    # Plugins section is also skipped — it is pure tool CLI status and only
+    # adds latency on a file-only run.
+    manifest = load_manifest()
+    selected = select_plugins(all_plugins, args.plugin)
+    plugin_unresolved = 0
+    plugin_state = {"snapshot": None}
 
-    # Shared width so report tags and action labels share one aligned column.
-    action_labels = ["would install", "would update"] if args.dry_run else (
-        ["linked"] if args.symlink else ["installed", "updated"])
-    label_width = max(len(s) for s in ["missing", "synced", "stale", *action_labels])
-    for _, _, _, rel, state in plan:
-        print(report_line(state, rel, label_width))
+    def section(lw):
+        plugin_state["snapshot"] = report_plugin_state(args, manifest, selected, label_width=lw)
+
+    base = Path.home() if args.global_scope else args.project_dir.resolve()
+    channel = None if args.status else ("marketplace" if marketplace else "checkout")
+    # The Plugins section only runs for commands that actually depend on
+    # plugin/marketplace state: status (always reports it), install on the
+    # marketplace channel, and uninstall on the marketplace channel. A
+    # file-only checkout run otherwise has no tool CLI to query and skipping
+    # it saves ~2s.
+    if args.status or marketplace:
+        section_cb = section
+    else:
+        section_cb = None
+    plan, label_width = print_header(
+        args, base, components, "status" if args.status else "install", section_cb, channel)
+    if plan is None:
+        return 0
+
+    # Guard a missing tool binary *after* print_header so the report (the
+    # useful part of a dry-run or status run) still prints; the hard error
+    # only blocks CLI-driven writes. On --dry-run we keep going even if the
+    # binary isn't installed so the user can preview what the tool would do
+    # once it is.
+    if marketplace and not args.status and not args.dry_run:
+        binary = resolve_tool_binary(args.tool)
+        if binary is None:
+            sys.exit(
+                f"error: '{TOOL_BINARIES[args.tool]}' not found on PATH. Install it, or pass "
+                "'--source checkout' to copy components from this checkout instead."
+            )
+    print_grouped_report(plan, label_width)
 
     counts = {"current": 0, "installed": 0, "updated": 0, "skipped": 0}
     acted = []
     first_prompt = True
-    bulk = None  # set to True/False once the user answers 'all'/'none'
+    bulk = {"value": None}
     for component, src, dest, rel, state in plan:
-        action = needs_action(state)
-        # --force acts on every job (today's behavior), e.g. to convert a
-        # current copy into a symlink under --symlink --force.
-        if not action and not args.force:
+        action_needed = needs_action(state)
+        if not action_needed and not args.force:
             counts["current"] += 1
             continue
         if args.status:
-            continue  # report-only
+            continue
 
         verb = action_verb(state)
         if args.force or args.yes:
             act = True
-        elif bulk is not None:
-            act = bulk  # a previous 'all'/'none' answer applies to the rest
+        elif bulk["value"] is not None:
+            act = bulk["value"]
         elif interactive and not args.dry_run:
-            # Blank line separates the prompts from the report list above. The
-            # prompt itself self-erases, so this blank persists as the separator.
             if first_prompt:
                 print()
                 first_prompt = False
             answer = confirm_action(f"{indent()}{verb} {component} '{rel}'?")
             if answer in ("all", "none"):
-                bulk = answer == "all"
-                act = bulk
+                bulk["value"] = answer == "all"
+                act = bulk["value"]
             else:
                 act = answer == "yes"
         else:
-            # Non-interactive fallback (and --dry-run preview, which never
-            # prompts): install missing, but never overwrite stale without an
-            # explicit signal (--yes/--force). Keeps the dry-run preview honest
-            # about what a real non-interactive run would do.
-            act = state == "missing"
+            act = args.dry_run
 
         if not act:
             counts["skipped"] += 1
             continue
-        # force=True so install_one overwrites stale copies / relinks stale links.
         install_one(src, dest, args.dry_run, force=True, symlink=args.symlink, quiet=True)
         if args.dry_run:
-            label = f"would {verb}"  # e.g. "would install" / "would update"
+            label = f"would {verb}"
         elif args.symlink:
             label = "linked"
         else:
@@ -540,22 +1166,57 @@ def cmd_install(args):
         acted.append(f"{indent()}{colorize(f'{label:<{label_width}}', 'green')} {rel}")
         counts["installed" if state == "missing" else "updated"] += 1
 
-    # Separate the report/actions from the summary with exactly one blank line.
-    # An interactive run already printed a blank before its first (self-erasing)
-    # prompt; reuse it instead of adding another.
+    # Phase 2: plugin actions after file actions. Rules ship via files
+    # (above), skills/agents via plugins — so the Changes section lists
+    # file work first (deterministic from the plan), then plugin work
+    # (in plugin selection order). The missing-binary case is guarded above.
+    if marketplace and not args.status:
+        plugin_unresolved, plugin_action_rows = act_on_plugins_install(
+            args, manifest, selected, interactive, label_width,
+            state=plugin_state["snapshot"],
+            bulk=bulk,
+        )
+        # On --dry-run, a missing tool binary (reported in the state phase
+        # as "unknown") doesn't mean anything was declined — it just means
+        # the CLI isn't installed yet. Zero the unresolved count so the
+        # summary doesn't show a misleading "skipped" number.
+        if args.dry_run and plugin_state["snapshot"] is not None and plugin_state["snapshot"].get("binary") is None:
+            plugin_unresolved = 0
+        acted.extend(plugin_action_rows)
+        # Fold plugin action rows into the counters used by the Summary
+        # line so plugin work isn't hidden: "would add"/"added" (marketplace
+        # setup) and "would install"/"installed" (plugins) both map to the
+        # file-side "installed"/"would install" counter. `skipped`/`failed`
+        # plugin rows already raise `plugin_unresolved` in act_on_plugins_*
+        # and are picked up below via the existing `plugin_unresolved`
+        # branch. (Plugin actions never emit "updated"/"would update" — a
+        # plugin is either installed or absent — so that set is unused here.)
+        install_tags = {"would install", "installed", "would add", "added"}
+        skip_tags = {"skipped", "kept", "failed"}
+        # plugin_row pads the tag to `label_width` chars before the name, so
+        # slicing by the known column width picks up multi-word tags like
+        # "would install" / "would add" without splitting on whitespace.
+        for row in plugin_action_rows:
+            content = _strip_color(row).lstrip()
+            if not content:
+                continue
+            tag = content[:label_width].strip()
+            if tag in install_tags:
+                counts["installed"] += 1
+            elif tag in skip_tags:
+                # already reflected in plugin_unresolved; nothing to add
+                pass
+
     if acted:
         if first_prompt:
-            print()  # no prompt separator was printed; add one before actions
+            print()
+        print(colorize(f"{indent()}Changes", "cyan"))
         for line in acted:
             print(line)
         print()
     elif first_prompt:
-        print()  # non-interactive / nothing prompted: add the summary separator
-    # else: the lingering prompt separator already serves as the summary blank
+        print()
 
-    # Of the items counted as current, how many are symlinks (vs copies)? Mirrors
-    # the current-count condition above: current means not needing action, and
-    # --force re-acts on everything so nothing stays merely "current".
     linked = 0 if args.force else sum(1 for *_, state in plan if state == "linked")
     current_label = f"{counts['current']} synced"
     if linked:
@@ -564,8 +1225,6 @@ def cmd_install(args):
         drift = sum(1 for *_, state in plan if needs_action(state))
         parts = [colorize(current_label, "green")]
         if drift:
-            # Red if any item is stale (the more severe state), else yellow for
-            # missing-only — matching the per-row report colors.
             stale = any(state in ("copied-stale", "stale-link") for *_, state in plan)
             parts.append(colorize(f"{drift} need attention", "red" if stale else "yellow"))
     else:
@@ -576,18 +1235,12 @@ def cmd_install(args):
             colorize(f"{counts['installed']} {iv}", "green"),
             colorize(f"{counts['updated']} {uv}", "green"),
         ]
-        if counts["skipped"]:
-            parts.append(colorize(f"{counts['skipped']} skipped", "dim"))
+        if counts["skipped"] or plugin_unresolved:
+            parts.append(colorize(f"{counts['skipped'] + plugin_unresolved} skipped", "dim"))
     unresolved = (args.status and any(needs_action(s) for *_, s in plan)) or \
-        (not args.status and counts["skipped"] > 0)
-    # ⚠️ is a narrow (1-cell) emoji vs ✅ (2-cell); pad it so the text aligns.
+        (not args.status and (counts["skipped"] > 0 or plugin_unresolved > 0))
     mark = ("⚠️  " if unresolved else "✅ ") if _USE_EMOJI else ""
     print(mark + colorize("Summary: ", "cyan") + ", ".join(parts))
-
-    # The reminder is a standing action hint (not a detail of the summary), so
-    # it stays flush-left with its own marker rather than dimmed/indented.
-    reminder = f"run '{TOOL_MARKETPLACE_UPDATE[args.tool]}' to update marketplace plugins/skills."
-    print(("💡 " if _USE_EMOJI else "Reminder: ") + reminder)
 
     if args.status and any(needs_action(state) for *_, state in plan):
         return 1
@@ -598,57 +1251,70 @@ def cmd_uninstall(args):
     """uninstall: remove components this tool installed (owned copies/links)."""
     resolve_colors(args.color)
     all_plugins = load_plugins()
-    components = resolve_selection(args, all_plugins, removing=True)
+    marketplace = resolve_marketplace(args)
+    components = resolve_selection(args, all_plugins, marketplace, removing=True)
     interactive = args._interactive
+    manifest = load_manifest()
+    selected = select_plugins(all_plugins, args.plugin)
+    plugin_unresolved = 0
+
+    # Phase 1: capture the query snapshot for the action phase to reuse,
+    # and print the Plugins section. On a file-only checkout run, skip the
+    # section entirely — no tool CLI to query, so no plugin state to report.
+    plugin_state = {"snapshot": None}
+
+    def section(lw):
+        plugin_state["snapshot"] = report_plugin_state(args, manifest, selected, label_width=lw)
 
     base = Path.home() if args.global_scope else args.project_dir.resolve()
-    result = print_header(args, base, components, "uninstall")
-    if result[0] is None:
+    channel = "marketplace" if marketplace else "checkout"
+    section_cb = section if marketplace else None
+    plan, label_width = print_header(args, base, components, "uninstall", section_cb, channel)
+    if plan is None:
         return 0
-    plan, _ = result
 
-    action_labels = ["would remove"] if args.dry_run else ["removed"]
-    label_width = max(len(s) for s in ["missing", "synced", "stale", *action_labels])
-    for _, _, _, rel, state in plan:
-        print(report_line(state, rel, label_width))
+    if marketplace and not args.dry_run:
+        binary = resolve_tool_binary(args.tool)
+        if binary is None:
+            sys.exit(
+                f"error: '{TOOL_BINARIES[args.tool]}' not found on PATH. Install it, or pass "
+                "'--source checkout' to manage only checkout-copied files."
+            )
+    print_grouped_report(plan, label_width)
 
     counts = {"absent": 0, "removed": 0, "skipped": 0}
     acted = []
     first_prompt = True
-    bulk = None
+    bulk = {"value": None}
     for component, src, dest, rel, state in plan:
         if state == "missing":
             counts["absent"] += 1
             continue
-        # We only own items that match the canonical source: 'linked' symlinks
-        # and 'copied-current' copies. Drifted items ('copied-stale',
-        # 'stale-link') may be the user's own edits, so skip unless --force.
         owned = state in ("linked", "copied-current")
         if not owned and not args.force:
-            kept = colorize(f"{'kept':<{label_width}}", "yellow")
+            kept_tag = colorize(f"{'kept':<{label_width}}", "yellow")
             acted.append(
-                f"{indent()}{kept} {rel}" + colorize("  (drifted; use --force to remove)", "dim")
+                f"{indent()}{kept_tag} {rel}" + colorize("  (drifted; use --force to remove)", "dim")
             )
             counts["skipped"] += 1
             continue
 
         if args.yes or args.force:
             act = True
-        elif bulk is not None:
-            act = bulk
+        elif bulk["value"] is not None:
+            act = bulk["value"]
         elif interactive and not args.dry_run:
             if first_prompt:
                 print()
                 first_prompt = False
             answer = confirm_action(f"{indent()}remove {component} '{rel}'?")
             if answer in ("all", "none"):
-                bulk = answer == "all"
-                act = bulk
+                bulk["value"] = answer == "all"
+                act = bulk["value"]
             else:
                 act = answer == "yes"
         else:
-            # Non-interactive without --yes: do not delete implicitly.
-            act = False
+            act = args.dry_run
 
         if not act:
             counts["skipped"] += 1
@@ -658,9 +1324,39 @@ def cmd_uninstall(args):
         acted.append(f"{indent()}{colorize(f'{label:<{label_width}}', 'green')} {rel}")
         counts["removed"] += 1
 
+    if marketplace:
+        plugin_unresolved, plugin_action_rows = act_on_plugins_uninstall(
+            args, manifest, selected, interactive, label_width,
+            state=plugin_state["snapshot"],
+            bulk=bulk,
+        )
+        # On --dry-run, a missing tool binary (reported in the state phase
+        # as "unknown") isn't a skipped action — it's just unavailable info.
+        # Zero the unresolved count so the summary doesn't double-count it.
+        if args.dry_run and plugin_state["snapshot"] is not None and plugin_state["snapshot"].get("binary") is None:
+            plugin_unresolved = 0
+        acted.extend(plugin_action_rows)
+        # Mirror the install-side counter merge: "would remove"/"removed"
+        # plugin rows feed into the shared `removed` counter; everything
+        # else (skipped/kept/failed) is already represented by
+        # `plugin_unresolved`, which feeds the kept/skipped summary line.
+        remove_tags = {"would remove", "removed"}
+        # Same column-based slicing as the install-side counter merge
+        # above: plugin_row pads the tag to `label_width` chars, so slice
+        # instead of splitting on whitespace (otherwise "would remove"
+        # collapses to "would" and never matches the counter set).
+        for row in plugin_action_rows:
+            content = _strip_color(row).lstrip()
+            if not content:
+                continue
+            tag = content[:label_width].strip()
+            if tag in remove_tags:
+                counts["removed"] += 1
+
     if acted:
         if first_prompt:
             print()
+        print(colorize(f"{indent()}Changes", "cyan"))
         for line in acted:
             print(line)
         print()
@@ -672,9 +1368,9 @@ def cmd_uninstall(args):
         colorize(f"{counts['removed']} {rv}", "green"),
         colorize(f"{counts['absent']} absent", "dim"),
     ]
-    if counts["skipped"]:
-        parts.append(colorize(f"{counts['skipped']} kept", "yellow"))
-    unresolved = counts["skipped"] > 0
+    if counts["skipped"] or plugin_unresolved:
+        parts.append(colorize(f"{counts['skipped'] + plugin_unresolved} kept/skipped", "yellow"))
+    unresolved = counts["skipped"] > 0 or plugin_unresolved > 0
     mark = ("⚠️  " if unresolved else "✅ ") if _USE_EMOJI else ""
     print(mark + colorize("Summary: ", "cyan") + ", ".join(parts))
     return 0
@@ -970,12 +1666,24 @@ def main():
         help="Symlink components back to this checkout instead of copying, so they track the "
         "source with no drift. The link target is relative. Not portable to Windows checkouts.",
     )
+    p_install.add_argument(
+        "--source",
+        choices=("marketplace", "checkout"),
+        default=None,
+        help="Delivery channel for skills/subagents (rules are copied either way). 'marketplace' "
+        "orchestrates the tool CLI to add the marketplace and install plugins; it is user-scoped, "
+        "so it forces --global and cannot be combined with --component. 'checkout' copies "
+        "components from this checkout, touching no marketplace. Default: marketplace for a "
+        "--global run with no --component, else checkout; passing --component selects checkout.",
+    )
     p_install.set_defaults(func=cmd_install, status=False)
 
     status_help = "Report each item's install state without writing; exit 1 on drift."
     p_status = sub.add_parser("status", help=status_help, description=status_help)
     add_selection_args(p_status, writes=False)
-    p_status.set_defaults(func=cmd_install, status=True, dry_run=False, force=False, yes=False, symlink=False)
+    p_status.set_defaults(
+        func=cmd_install, status=True, dry_run=False, force=False, yes=False, symlink=False, source=None,
+    )
 
     uninstall_help = "Remove components this tool installed."
     p_uninstall = sub.add_parser("uninstall", help=uninstall_help, description=uninstall_help)
@@ -987,6 +1695,16 @@ def main():
     )
     p_uninstall.add_argument(
         "--yes", "-y", action="store_true", help="Assume yes: remove owned items without prompting.")
+    p_uninstall.add_argument(
+        "--source",
+        choices=("marketplace", "checkout"),
+        default=None,
+        help="Delivery channel to undo (rules are removed either way). 'marketplace' uninstalls "
+        "plugins via the tool CLI and removes the marketplace once no Agentry plugin remains; it "
+        "is user-scoped, so it forces --global and cannot be combined with --component. 'checkout' "
+        "removes only checkout-copied files. Default: marketplace for a --global run with no "
+        "--component, else checkout; passing --component selects checkout.",
+    )
     p_uninstall.set_defaults(func=cmd_uninstall, status=False, symlink=False)
 
     generate_help = "Regenerate per-tool packaging from agentry.json."

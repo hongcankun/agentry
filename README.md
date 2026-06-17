@@ -33,26 +33,37 @@ traecli plugin install agentry-authoring@agentry
 traecli plugin install agentry-docs@agentry
 ```
 
-Update later with `traecli plugin marketplace update agentry` (or run the equivalents as `/plugin ...` inside a session).
+Update later with `traecli plugin marketplace update agentry`.
 
-### Installing rules
+### The install script
 
-Neither the Claude Code nor the Trae plugin format has a "rules" component, so rules are not delivered by installing a plugin. After installing a plugin that has associated rules (e.g. `agentry-code-quality`), add them with the install script:
+`scripts/agentry.py` complements the marketplace. It reads `agentry.json` (so everything maps to the same plugins) and delivers a plugin's pieces through one of **two channels**:
+
+- **marketplace** — orchestrates the tool's own CLI (e.g. `traecli` / `claude`) to add the marketplace and install or remove the selected plugins. The marketplace channel is **user-scoped**, so it forces `--global` and cannot be combined with `--component`; it is the default for a `--global` run.
+- **checkout** — copies components straight from this checkout into the tool's directories and never touches the marketplace. It is the default at project scope. Passing `--component {rules,skills,agents}` (repeatable) implicitly selects it; `--source checkout` forces it.
+
+Rules are **never delivered by a plugin** (neither Claude Code nor Trae ship rules in their plugin format), so the script always copies them regardless of channel.
 
 ```
-# Install the rules for a plugin, into the tool's project rules dir
+# Marketplace channel (user scope): add the marketplace + install the plugin, then copy rules
+python3 scripts/agentry.py install --tool trae --global --plugin agentry-code-quality --yes
+
+# Checkout channel (project scope): copy a plugin's rules into .trae/rules or .claude/rules
 python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
-python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality
+
+# Checkout channel: copy skills and subagents from this checkout (for development, or tools
+# without marketplace support)
+python3 scripts/agentry.py install --tool trae --component skills --component agents
 ```
 
-The script reads `agentry.json` (so rules map to the same plugins as the marketplace) and writes to the tool's rules directory (`.claude/rules/`, `.trae/rules/`). It can also install skills and subagents directly from a checkout — useful for development or tools without marketplace support; see `python3 scripts/agentry.py install --help`.
+A bare `install` run is **interactive**: it reports each item's state (missing / synced / stale vs the canonical source), then prompts on a TTY for any omitted selection (`--tool`, `--plugin`, `--component`s, `--symlink`) and before each action, including marketplace/plugin CLI calls. Pass `--defaults` to accept the default selections without asking, or `--yes` to auto-confirm every action.
 
-A bare `install` run is **interactive**: it reports each item's state (missing / synced / stale vs the canonical source), then prompts on a TTY — both for any selection you omitted (`--tool`, `--plugin`, `--component`s, `--symlink`) and before installing or updating each item. Pass `--defaults` to accept the default selections without asking, or `--yes` to auto-confirm the actions. When stdout is not a TTY (CI, piped), it installs missing items and skips stale ones without prompting, then reminds you to run the tool's marketplace update for the plugins/skills it cannot see.
+Non-interactive (CI, piped) behavior is conservative: install installs missing files and skips stale ones; uninstall removes owned files only. Both skip the marketplace/plugin phase unless `--yes` is given. Use `--dry-run` to preview either channel without writing anything.
 
 Two companion subcommands round out the lifecycle:
 
-- `status` — report-only; writes nothing and exits 1 if anything is missing or stale (handy for CI).
-- `uninstall` — remove components this repo installed (owned copies/links); keeps items that have drifted from the source unless you pass `--force`.
+- `status` — report-only; writes nothing. Exits 1 if any file is missing or stale (handy for CI). Also reports marketplace and per-plugin install state read-only (at any scope — plugins are user-scoped), which is informational and never affects the exit code.
+- `uninstall` — remove components this repo installed (owned copies or symlinks). Keeps items that have drifted from the source unless `--force` is passed. On the marketplace channel it uninstalls the plugin via the tool CLI and removes the marketplace only when no Agentry plugin remains (to keep it otherwise, or force-remove it, use the tool's own CLI).
 
 Add `--symlink` to link components back to the checkout instead of copying, so they track the source with no drift (the link is relative; not portable to Windows checkouts):
 
@@ -60,7 +71,7 @@ Add `--symlink` to link components back to the checkout instead of copying, so t
 python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality --symlink
 ```
 
-Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--component {skills,agents,rules}` (repeatable; default: `rules`), `--symlink` (install only; default: copy), `--global` (default: project scope), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
+Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--source {marketplace,checkout}` (default: marketplace for `--global` runs without `--component`, otherwise checkout), `--component {skills,agents,rules}` (repeatable; selects checkout; default: `rules`), `--symlink` (install only; default: copy), `--global` (default: project scope; forced by the marketplace channel), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
 
 ## Plugins
 
