@@ -1,6 +1,6 @@
 ---
 name: plugin-manager
-description: Create, update, or review plugins and plugin marketplaces for AI coding tools like Claude Code and Trae CLI, including defining a plugin's components (skills, subagents, commands, hooks, MCP servers), writing the plugin manifest, organizing the directory layout, assembling a marketplace catalog, and reviewing plugins for validity and overlap. Use when a user asks to create a new plugin or marketplace, edit an existing one, or review plugin files such as .claude-plugin/plugin.json, .claude-plugin/marketplace.json, .trae-plugin/marketplace.json, or traecli.yaml.
+description: Create, update, or review plugins and plugin marketplaces for AI coding tools like Claude Code and Trae CLI, including defining a plugin's components (skills, subagents, commands, hooks, MCP servers), writing the plugin manifest, organizing the directory layout, assembling a marketplace catalog, and reviewing plugins for validity and overlap. Use when a user asks to create a new plugin or marketplace, edit an existing one, or review plugin files such as .claude-plugin/plugin.json, .claude-plugin/marketplace.json, .trae-plugin/marketplace.json, or traecli.toml.
 ---
 
 # Plugin Manager
@@ -37,7 +37,7 @@ If details are missing, infer reasonable defaults from the request and the repo:
 
 ## Plugin and marketplace conventions
 
-A plugin is a directory: component folders at the root plus a manifest in a tool-specific `.<tool>-plugin/` directory (Claude Code) or a `traecli.yaml` main config (Trae). A marketplace is a `marketplace.json` catalog listing plugins by name and source. Two things are common across tools:
+A plugin is a directory: component folders at the root plus a manifest in a tool-specific `.<tool>-plugin/` directory (Claude Code) or a `traecli.toml` main config (Trae, only when package-level MCP/hooks/models/tool permissions are needed). A marketplace is a `marketplace.json` catalog listing plugins by name and source. Two things are common across tools:
 
 - **Plugin name** — unique, kebab-case; it namespaces the plugin's skills and commands.
 - **Marketplace entry** — at minimum a `name` and a `source` telling the tool where to fetch the plugin.

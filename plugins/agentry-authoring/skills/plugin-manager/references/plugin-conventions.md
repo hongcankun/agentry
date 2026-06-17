@@ -61,7 +61,7 @@ claude --plugin-dir ./my-plugin          # load a plugin without installing
 
 ```
 my-plugin/
-├── traecli.yaml         # main config (compat name: coco.yaml); optional
+├── traecli.toml         # package config for MCP/hooks/models/tool permissions; optional
 ├── skills/<name>/SKILL.md
 ├── agents/<name>.md
 ├── commands/<name>.md
@@ -69,8 +69,8 @@ my-plugin/
 ```
 
 - There is **no per-plugin manifest file**: plugin metadata comes from the marketplace entry, and component directories are auto-detected.
-- `traecli.yaml` is needed only for MCP servers, hooks, models, or tool-permission rules (`mcp_servers`, `hooks`, `models`, `allowed_tools`/`disallowed_tools`). A plugin of only skills/subagents/commands needs no `traecli.yaml`.
-- Skills install under the `pluginname:skillname` namespace. Path variables in `traecli.yaml`: `${COCO_PLUGIN_ROOT}` (aliases `${CLAUDE_PLUGIN_ROOT}`, `${AGENT_PLUGIN_ROOT}`).
+- `traecli.toml` is needed only for MCP servers, hooks, models, or tool-permission rules (`mcp_servers`, `hooks`, `models`, `allowed_tools`/`disallowed_tools`). A plugin of only skills/subagents/commands needs no `traecli.toml`.
+- Skills install under the `pluginname:skillname` namespace. Path variables in `traecli.toml`: `${COCO_PLUGIN_ROOT}` (aliases `${CLAUDE_PLUGIN_ROOT}`, `${AGENT_PLUGIN_ROOT}`).
 
 ### marketplace.json
 
@@ -105,5 +105,5 @@ A plugin's `version` is the user-facing update signal: both Claude Code and Trae
 
 ## Notes
 
-- The Claude and Trae specs overlap for skills/subagents/commands, so a plugin with only those components, plus a `.claude-plugin/marketplace.json`, can install in both tools. They diverge on the `owner` shape and on where MCP/hooks/model config lives (`plugin.json` vs `traecli.yaml`), so ship a native catalog per tool when targeting both.
+- The Claude and Trae specs overlap for skills/subagents/commands, so a plugin with only those components, plus a `.claude-plugin/marketplace.json`, can install in both tools. They diverge on the `owner` shape and on where MCP/hooks/model config lives (`plugin.json` vs `traecli.toml`), so ship a native catalog per tool when targeting both.
 - Conventions evolve; if a project's layout disagrees with this file, follow the project and flag the discrepancy. Verify field names and source forms against the target tool's own docs before committing to them.
