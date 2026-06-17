@@ -15,7 +15,7 @@ Use this checklist when reviewing a plugin or marketplace definition.
 
 - Component directories (`skills/`, `agents/`, `commands/`, …) are at the plugin root.
 - For Claude Code, only `plugin.json` lives inside `.claude-plugin/`.
-- For Trae, `traecli.yaml` exists only if the plugin has MCP servers, hooks, models, or tool-permissions.
+- For Trae, `traecli.toml` exists only if the plugin has MCP servers, hooks, models, or tool-permissions.
 - Each component is well-formed (e.g. `skills/<name>/SKILL.md` present; subagent files have valid frontmatter).
 - The tool's validator (`claude plugin validate` / `traecli plugin validate`) recognizes every intended component.
 
