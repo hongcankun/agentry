@@ -575,6 +575,10 @@ class ArgparseTests(unittest.TestCase):
         args = self._parser().parse_args(["install", "--tool", "claude", "--component", "skills", "--component", "agents"])
         self.assertEqual(sorted(args.component), ["agents", "skills"])
 
+    def test_component_all_parses(self):
+        args = self._parser().parse_args(["install", "--tool", "claude", "--component", "all"])
+        self.assertEqual(args.component, ["all"])
+
 
 # ---------------------------------------------------------------------------
 # Orchestration helper: run_tool_command surface-behavior (no real binary)
@@ -968,6 +972,11 @@ class DeliveryChannelTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             agentry.resolve_marketplace(ns)
 
+    def test_resolve_marketplace_rejects_marketplace_plus_component_all(self):
+        ns = _make_namespace(source="marketplace", component=["all"])
+        with self.assertRaises(SystemExit):
+            agentry.resolve_marketplace(ns)
+
     def test_resolve_selection_default_components(self):
         ns = _make_namespace()
         with mock.patch.object(agentry, "sys") as fake_sys:
@@ -993,6 +1002,22 @@ class DeliveryChannelTests(unittest.TestCase):
             fake_sys.stdout.isatty.return_value = False
             components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
         self.assertEqual(components, {"skills", "rules"})
+
+    def test_resolve_selection_expands_component_all(self):
+        ns = _make_namespace(component=["all"])
+        with mock.patch.object(agentry, "sys") as fake_sys:
+            fake_sys.stdin.isatty.return_value = False
+            fake_sys.stdout.isatty.return_value = False
+            components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
+        self.assertEqual(components, set(agentry.COMPONENTS))
+
+    def test_resolve_selection_component_all_dedupes_explicit_components(self):
+        ns = _make_namespace(component=["all", "rules"])
+        with mock.patch.object(agentry, "sys") as fake_sys:
+            fake_sys.stdin.isatty.return_value = False
+            fake_sys.stdout.isatty.return_value = False
+            components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
+        self.assertEqual(components, set(agentry.COMPONENTS))
 
 
 # ---------------------------------------------------------------------------

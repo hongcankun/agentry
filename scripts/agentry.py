@@ -76,6 +76,7 @@ CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
 
 COMPONENTS = ("skills", "agents", "rules")
+COMPONENT_CHOICES = COMPONENTS + ("all",)
 
 COMPONENT_TITLE = {"rules": "Rules", "skills": "Skills", "agents": "Agents"}
 
@@ -996,11 +997,13 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
             args.plugin = picked
 
     if component_unset and ask_optional:
-        args.component = choose("Which components?", ["rules", "skills", "agents"], default="rules", multi=True)
+        args.component = choose("Which components?", ["rules", "skills", "agents", "all"], default="rules", multi=True)
 
     if writes and not args.symlink and ask_optional:
         args.symlink = confirm("Symlink instead of copy?", default=False)
 
+    if args.component and "all" in args.component:
+        return set(COMPONENTS)
     return set(args.component) if args.component else {"rules"}
 
 
@@ -1636,9 +1639,9 @@ def add_selection_args(parser, *, writes):
     parser.add_argument(
         "--component",
         action="append",
-        choices=COMPONENTS,
-        help="Component types to act on (repeatable). Default: rules only, since skills "
-        "and subagents are delivered by the plugin marketplace.",
+        choices=COMPONENT_CHOICES,
+        help="Component types to act on (repeatable; use 'all' for skills, agents, and rules). "
+        "Default: rules only, since skills and subagents are delivered by the plugin marketplace.",
     )
     parser.add_argument(
         "--global",
