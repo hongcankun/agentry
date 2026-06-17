@@ -118,6 +118,7 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow — edi
 - [`plugins/`](./plugins) — each plugin's skills (`skills/<name>/SKILL.md`) and subagents (`agents/<name>.md`).
 - [`rules/`](./rules) — tool-agnostic rules, organized by topic; associated with plugins via the manifest.
 - [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` a plugin's components into a tool's directories, and `generate` per-tool packaging from the manifest.
+- [`scripts/tests/`](./scripts/tests) — stdlib-only (`unittest`) tests for `scripts/agentry.py`.
 
 ### Generated files
 
