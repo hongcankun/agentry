@@ -30,6 +30,10 @@ When changing the extensions or plugin set, follow these steps in order:
      ```bash
      python3 scripts/agentry.py generate --check
      ```
+   - Run the test suite (stdlib `unittest` — no extra dependencies):
+     ```bash
+     python3 -m unittest discover scripts/tests
+     ```
 
 ## Dogfooding
 
