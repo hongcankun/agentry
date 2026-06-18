@@ -152,6 +152,22 @@ def _strip_color(text):
     return re.sub(r"\x1b\[[0-9;]*m", "", text)
 
 
+def prompt_rows(text):
+    """Return how many terminal rows text occupies after line wrapping."""
+    width = max(1, shutil.get_terminal_size(fallback=(80, 24)).columns)
+    rows = 0
+    for line in _strip_color(text).splitlines() or [""]:
+        rows += max(1, (len(line) + width - 1) // width)
+    return rows
+
+
+def erase_tty_rows(rows):
+    """Erase the last rows from a TTY and flush so cleanup is immediate."""
+    if sys.stdout.isatty():
+        sys.stdout.write(f"\033[{rows}F\033[J")
+        sys.stdout.flush()
+
+
 def indent():
     # Body lines (report rows, detail, prompts, actions) indent to align under
     # the header text. With the 📦 prefix (2 cols + space) that is 3, else 2.
@@ -389,9 +405,9 @@ def confirm(question, default):
     surfaced later in the run header, not left on screen here.
     """
     suffix = "[Y/n]" if default else "[y/N]"
-    reply = input(f"{colorize(question, 'cyan')} {colorize(suffix, 'dim')} ").strip().lower()
-    if sys.stdout.isatty():
-        sys.stdout.write("\033[1F\033[J")  # erase the prompt line
+    prompt = f"{colorize(question, 'cyan')} {colorize(suffix, 'dim')} "
+    reply = input(prompt).strip().lower()
+    erase_tty_rows(prompt_rows(prompt))
     if not reply:
         return default
     return reply in ("y", "yes")
@@ -405,15 +421,17 @@ def confirm_action(question):
     """
     replies = {"": "yes", "y": "yes", "yes": "yes", "n": "no", "no": "no",
                "a": "all", "all": "all", "q": "none", "none": "none"}
-    printed = 1  # the prompt/input line
+    prompt = f"{colorize(question, 'cyan')} {colorize('[Y/n/a/q]', 'dim')} "
+    printed = 0
     while True:
-        reply = input(f"{colorize(question, 'cyan')} {colorize('[Y/n/a/q]', 'dim')} ").strip().lower()
+        reply = input(prompt).strip().lower()
+        printed += prompt_rows(prompt)
         if reply in replies:
             break
-        print(colorize("error: answer y (yes), n (no), a (yes to all), or q (no to all)", "red"))
-        printed += 2  # the error line plus the next prompt line
-    if sys.stdout.isatty():
-        sys.stdout.write(f"\033[{printed}F\033[J")  # erase the prompt block
+        error = colorize("error: answer y (yes), n (no), a (yes to all), or q (no to all)", "red")
+        print(error)
+        printed += prompt_rows(error)
+    erase_tty_rows(printed)
     return replies[reply]
 
 
@@ -444,9 +462,10 @@ def choose(question, options, default=None, multi=False):
         marker = colorize(" (default)", "dim") if option == default else ""
         emit(f"  {colorize(str(i), 'cyan')}) {option}{marker}")
     hint = colorize(f"[1-{len(options)}]" + (", comma-separated" if multi else ""), "dim")
+    prompt = f"{colorize('Choose', 'cyan')} {hint}: "
     while True:
-        reply = input(f"{colorize('Choose', 'cyan')} {hint}: ").strip()
-        printed += 1  # the prompt/input line
+        reply = input(prompt).strip()
+        printed += prompt_rows(prompt)
         if not reply and default is not None:
             choice = [default] if multi else default
         elif multi:
@@ -463,10 +482,9 @@ def choose(question, options, default=None, multi=False):
             emit(colorize(f"error: choose a number 1-{len(options)} or a name", "red"))
             continue
         break
-    if sys.stdout.isatty():
-        # Move to the start of the question line and clear to end of screen,
-        # fully erasing the prompt block.
-        sys.stdout.write(f"\033[{printed}F\033[J")
+    # Move to the start of the question line and clear to end of screen,
+    # fully erasing the prompt block.
+    erase_tty_rows(printed)
     return choice
 
 
