@@ -1,0 +1,1 @@
+../../plugins/agentry-git/commands/finish-pr.md

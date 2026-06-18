@@ -94,6 +94,9 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 
 - **git-workflow** skill: Apply git workflow best practices, including choosing a branching strategy, writing commits and pull requests, performing merges and rebases safely, resolving conflicts, and managing releases and tags.
 - **conventional-commits** skill: Create commits that follow the Conventional Commits specification, including selecting appropriate types, writing clear descriptions, and validating commit messages.
+- **prepare-commit** command: Inspect repository changes, stage a focused commit, and create a Conventional Commit after confirmation.
+- **prepare-pr** command: Inspect branch state and draft or create a pull request with a Conventional Commit title after confirmation.
+- **finish-pr** command: Clean up after a merged pull request by updating the base branch and deleting the local feature branch after confirmation.
 - **vcs/conventional-commits** rule: Policy for when the Conventional Commits format applies and what a commit message must satisfy before committing; defers the message format and validation procedure to the `conventional-commits` skill.
 
 ### [agentry-authoring](./plugins/agentry-authoring)

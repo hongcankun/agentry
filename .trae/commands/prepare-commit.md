@@ -1,0 +1,1 @@
+../../plugins/agentry-git/commands/prepare-commit.md
