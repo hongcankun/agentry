@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest import mock
 
@@ -72,6 +73,12 @@ class ColorTests(unittest.TestCase):
         colored = agentry.colorize("row", "green")
         self.assertNotEqual(colored, "row")
         self.assertEqual(agentry._strip_color(colored), "row")
+
+    def test_prompt_rows_counts_wrapped_rows(self):
+        with mock.patch.object(shutil, "get_terminal_size", return_value=os.terminal_size((10, 24))):
+            self.assertEqual(agentry.prompt_rows("short"), 1)
+            self.assertEqual(agentry.prompt_rows("0123456789x"), 2)
+            self.assertEqual(agentry.prompt_rows("one\n0123456789x"), 3)
 
     def test_indent_depends_on_emoji_flag(self):
         agentry.init_colors(False)
@@ -776,12 +783,12 @@ class PromptTests(unittest.TestCase):
     def tearDown(self):
         agentry.init_colors(False)
 
+    @contextmanager
     def _redirect_tty(self, isatty=True):
-        return mock.patch.multiple(
-            "sys",
-            stdin=mock.MagicMock(isatty=lambda: isatty),
-            stdout=mock.MagicMock(isatty=lambda: isatty),
-        )
+        stdin = mock.MagicMock(isatty=lambda: isatty)
+        stdout = mock.MagicMock(isatty=lambda: isatty)
+        with mock.patch.object(sys, "stdin", stdin), mock.patch.object(sys, "stdout", stdout):
+            yield {"stdin": stdin, "stdout": stdout}
 
     def test_confirm_default_true_accepts_empty(self):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value=""):
@@ -796,6 +803,21 @@ class PromptTests(unittest.TestCase):
             self.assertTrue(agentry.confirm("ok?", default=False))
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value="N"):
             self.assertFalse(agentry.confirm("ok?", default=True))
+
+    def test_confirm_flushes_tty_erase(self):
+        with self._redirect_tty(isatty=True) as streams, mock.patch("builtins.input", return_value=""):
+            self.assertTrue(agentry.confirm("ok?", default=True))
+        streams["stdout"].write.assert_called_with("\033[1F\033[J")
+        streams["stdout"].flush.assert_called_once()
+
+    def test_confirm_erases_wrapped_prompt_rows(self):
+        with self._redirect_tty(isatty=True) as streams, \
+                mock.patch("builtins.input", return_value=""), \
+                mock.patch.object(shutil, "get_terminal_size", return_value=os.terminal_size((20, 24))):
+            self.assertTrue(agentry.confirm("Use defaults (plugin: all · components: agents, commands, rules, skills · mode: copy)?", default=True))
+        rows = int(streams["stdout"].write.call_args.args[0].removeprefix("\033[").split("F", 1)[0])
+        self.assertGreater(rows, 1)
+        streams["stdout"].flush.assert_called_once()
 
     def test_confirm_action_maps_all_variants(self):
         for user_input, expected in [
@@ -812,6 +834,12 @@ class PromptTests(unittest.TestCase):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", lambda *a, **kw: next(inputs)):
             self.assertEqual(agentry.confirm_action("?"), "yes")
 
+    def test_confirm_action_flushes_tty_erase(self):
+        with self._redirect_tty(isatty=True) as streams, mock.patch("builtins.input", return_value="a"):
+            self.assertEqual(agentry.confirm_action("?"), "all")
+        streams["stdout"].write.assert_called_with("\033[1F\033[J")
+        streams["stdout"].flush.assert_called_once()
+
     def test_choose_picks_by_index(self):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value="2"):
             self.assertEqual(agentry.choose("?", ["a", "b", "c"]), "b")
@@ -823,6 +851,12 @@ class PromptTests(unittest.TestCase):
     def test_choose_default_when_empty(self):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value=""):
             self.assertEqual(agentry.choose("?", ["a", "b", "c"], default="b"), "b")
+
+    def test_choose_flushes_tty_erase(self):
+        with self._redirect_tty(isatty=True) as streams, mock.patch("builtins.input", return_value="2"):
+            self.assertEqual(agentry.choose("?", ["a", "b", "c"]), "b")
+        streams["stdout"].write.assert_called_with("\033[5F\033[J")
+        streams["stdout"].flush.assert_called_once()
 
     def test_choose_multi_parses_comma_and_space(self):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value="1, 3"):
