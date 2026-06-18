@@ -117,6 +117,7 @@ MARKETPLACE_REFRESH_COMMANDS = {
 
 # Install states for a planned (src -> dest) job that the installer must act on.
 ACTION_STATES = ("missing", "copied-stale", "stale-link")
+SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 # ANSI color codes, applied only when stdout is a TTY and NO_COLOR is unset
 # (https://no-color.org). Populated by init_colors().
@@ -223,28 +224,64 @@ def select_plugins(plugins, plugin_name):
     return [match]
 
 
+def validate_path_fragment(value, label, *, allow_nested):
+    """Return ``value`` after rejecting absolute or parent-traversing paths."""
+    if not isinstance(value, str) or not value:
+        sys.exit(f"error: unsafe {label}: {value!r}")
+    path = Path(value)
+    if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
+        sys.exit(f"error: unsafe {label}: {value}")
+    if not allow_nested and (len(path.parts) != 1 or not SAFE_NAME_RE.fullmatch(value)):
+        sys.exit(f"error: unsafe {label}: {value}")
+    return value
+
+
+def confined_path(base, rel_path, label):
+    """Join ``rel_path`` under ``base`` and fail if the resolved path escapes."""
+    root = base.resolve()
+    candidate = (base / rel_path).resolve()
+    if candidate != root and root not in candidate.parents:
+        sys.exit(f"error: {label} escapes {base}: {rel_path}")
+    return candidate
+
+
+def confined_leaf_path(base, rel_path, label):
+    """Join a destination leaf under ``base`` without resolving the leaf itself."""
+    path = base / rel_path
+    root = base.resolve()
+    parent = path.parent.resolve()
+    if parent != root and root not in parent.parents:
+        sys.exit(f"error: {label} escapes {base}: {rel_path}")
+    return path
+
+
 def plugin_component_entries(plugin, components):
     """Yield (component, source, relative-destination) entries for one plugin."""
+    plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
     if "skills" in components:
         for skill in plugin.get("skills", []):
-            yield "skills", PLUGINS_DIR / plugin["name"] / "skills" / skill, skill
+            skill_name = validate_path_fragment(skill, "skill name", allow_nested=False)
+            yield "skills", PLUGINS_DIR / plugin_name / "skills" / skill_name, skill_name
     if "agents" in components:
         for agent in plugin.get("agents", []):
+            agent_name = validate_path_fragment(agent, "agent name", allow_nested=False)
             yield (
                 "agents",
-                PLUGINS_DIR / plugin["name"] / "agents" / f"{agent}.md",
-                f"{agent}.md",
+                PLUGINS_DIR / plugin_name / "agents" / f"{agent_name}.md",
+                f"{agent_name}.md",
             )
     if "commands" in components:
         for command in plugin.get("commands", []):
+            command_name = validate_path_fragment(command, "command name", allow_nested=False)
             yield (
                 "commands",
-                PLUGINS_DIR / plugin["name"] / "commands" / f"{command}.md",
-                f"{command}.md",
+                PLUGINS_DIR / plugin_name / "commands" / f"{command_name}.md",
+                f"{command_name}.md",
             )
     if "rules" in components:
         for rule in plugin.get("rules", []):
-            yield "rules", RULES_DIR / rule, rule
+            rule_path = validate_path_fragment(rule, "rule path", allow_nested=True)
+            yield "rules", RULES_DIR / rule_path, rule_path
 
 
 def plan_copies(plugins, components):
@@ -1123,6 +1160,7 @@ def should_report_plugins(args, marketplace):
 
 def selected_file_plan(args, base, components):
     """Build classified file-copy plan rows for the selected plugin/components."""
+    base = base.resolve()
     plugins = select_plugins(load_plugins(), args.plugin)
     jobs = plan_copies(plugins, components)
     if not jobs:
@@ -1133,7 +1171,8 @@ def selected_file_plan(args, base, components):
     for component, src, rel_dest in jobs:
         if not src.exists():
             sys.exit(f"error: source missing: {src}")
-        dest = base / targets[component] / rel_dest
+        dest_base = base / targets[component]
+        dest = confined_leaf_path(dest_base, rel_dest, f"{component} destination")
         rel = dest.relative_to(base)
         state = classify_state(src, dest)
         plan.append((component, src, dest, rel, state))
@@ -1493,10 +1532,14 @@ def serialize(data):
 
 
 def write_or_check(path, content, check, changed):
+    root = REPO_ROOT.resolve()
+    path = path.resolve()
+    if path != root and root not in path.parents:
+        sys.exit(f"error: generated output escapes {REPO_ROOT}: {path}")
     existing = path.read_text(encoding="utf-8") if path.exists() else None
     if existing == content:
         return
-    rel = path.relative_to(REPO_ROOT)
+    rel = path.relative_to(root)
     changed.append(str(rel))
     if check:
         return
@@ -1518,9 +1561,10 @@ def build_claude_marketplace(manifest):
     catalog["metadata"] = {"pluginRoot": "./plugins"}
     catalog["plugins"] = []
     for plugin in manifest["plugins"]:
+        plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
         entry = {
-            "name": plugin["name"],
-            "source": f"./{plugin['name']}",
+            "name": plugin_name,
+            "source": f"./{plugin_name}",
             "description": plugin.get("description", ""),
         }
         if "version" in plugin:
@@ -1534,9 +1578,10 @@ def build_claude_marketplace(manifest):
 
 
 def build_claude_plugin_manifest(manifest, plugin):
+    plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
     out = {
         "$generated": generated_note("claude"),
-        "name": plugin["name"],
+        "name": plugin_name,
         "description": plugin.get("description", ""),
     }
     if "version" in plugin:
@@ -1565,13 +1610,14 @@ def build_trae_marketplace(manifest):
         "plugins": [],
     }
     for plugin in manifest["plugins"]:
+        plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
         entry = {
-            "name": plugin["name"],
+            "name": plugin_name,
             "description": plugin.get("description", ""),
         }
         if "version" in plugin:
             entry["version"] = plugin["version"]
-        entry["source"] = f"./plugins/{plugin['name']}"
+        entry["source"] = f"./plugins/{plugin_name}"
         catalog["plugins"].append(entry)
     return catalog
 
@@ -1579,7 +1625,8 @@ def build_trae_marketplace(manifest):
 def generate_claude(manifest, check, changed):
     write_or_check(CLAUDE_MARKETPLACE, serialize(build_claude_marketplace(manifest)), check, changed)
     for plugin in manifest["plugins"]:
-        path = PLUGINS_DIR / plugin["name"] / ".claude-plugin" / "plugin.json"
+        plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
+        path = PLUGINS_DIR / plugin_name / ".claude-plugin" / "plugin.json"
         write_or_check(path, serialize(build_claude_plugin_manifest(manifest, plugin)), check, changed)
 
 
@@ -1634,11 +1681,12 @@ def build_skill_reference(rule_rel):
     marker-fenced exclude blocks (maintainer-only prose), leaving the portable
     body, then prepends a note pointing back to the canonical source.
     """
-    src = RULES_DIR / rule_rel
+    rule_path = validate_path_fragment(rule_rel, "skillReferences rule path", allow_nested=True)
+    src = confined_path(RULES_DIR, rule_path, "skillReferences rule path")
     if not src.exists():
         sys.exit(f"error: skillReferences rule not found: {src}")
     note = (
-        f"<!-- GENERATED from rules/{rule_rel} by 'scripts/agentry.py generate'. "
+        f"<!-- GENERATED from rules/{rule_path} by 'scripts/agentry.py generate'. "
         "Do not edit by hand; edit the canonical rule. -->\n\n"
     )
     body = strip_excluded_blocks(strip_frontmatter(src.read_text(encoding="utf-8")))
@@ -1653,11 +1701,14 @@ def generate_skill_references(manifest, check, changed):
     plugin, while the rule stays the single source of truth under rules/.
     """
     for plugin in manifest["plugins"]:
+        plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
         for skill, rules in plugin.get("skillReferences", {}).items():
+            skill_name = validate_path_fragment(skill, "skill name", allow_nested=False)
             for rule_rel in rules:
+                rule_path = validate_path_fragment(rule_rel, "skillReferences rule path", allow_nested=True)
                 dest = (
-                    PLUGINS_DIR / plugin["name"] / "skills" / skill
-                    / "references" / Path(rule_rel).name
+                    PLUGINS_DIR / plugin_name / "skills" / skill_name
+                    / "references" / Path(rule_path).name
                 )
                 write_or_check(dest, build_skill_reference(rule_rel), check, changed)
 

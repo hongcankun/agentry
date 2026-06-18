@@ -415,6 +415,30 @@ class InstallPlanAndStateTests(unittest.TestCase):
         self.assertEqual(agentry.action_verb("missing"), "install")
         self.assertEqual(agentry.action_verb("copied-stale"), "update")
 
+    def test_validate_path_fragment_rejects_parent_traversal(self):
+        with self.assertRaises(SystemExit):
+            agentry.validate_path_fragment("../outside", "rule path", allow_nested=True)
+
+    def test_validate_path_fragment_rejects_nested_component_name(self):
+        with self.assertRaises(SystemExit):
+            agentry.validate_path_fragment("nested/skill", "skill name", allow_nested=False)
+
+    def test_confined_path_rejects_escaped_destination(self):
+        with self.assertRaises(SystemExit):
+            agentry.confined_path(self.tmp / "base", "../outside", "destination")
+
+    def test_confined_leaf_path_preserves_leaf_symlink(self):
+        base = self.tmp / "base"
+        outside = self.tmp / "outside.md"
+        link = base / "link.md"
+        base.mkdir()
+        self._mkfile(outside, "outside")
+        link.symlink_to(outside)
+        self.assertEqual(
+            agentry.confined_leaf_path(base, "link.md", "destination"),
+            link,
+        )
+
     def test_install_one_copy_round_trip(self):
         src = self.tmp / "source.md"
         dest = self.tmp / "nested" / "dest.md"
@@ -1355,6 +1379,15 @@ class GenerationRoundTripTests(unittest.TestCase):
             self.assertEqual(pd["name"], plugin["name"])
             self.assertIn("GENERATED", pd.get("$generated", ""))
 
+    def test_generate_claude_rejects_traversing_plugin_name(self):
+        manifest = {
+            **self.repo.manifest_dict,
+            "plugins": [{"name": "../outside", "description": "bad"}],
+        }
+        with self.assertRaises(SystemExit):
+            agentry.generate_claude(manifest, check=False, changed=[])
+        self.assertFalse((self.repo.root.parent / "outside").exists())
+
     def test_generate_trae_writes_marketplace(self):
         manifest = self.repo.manifest_dict
         agentry.generate_trae(manifest, check=False, changed=[])
@@ -1382,12 +1415,30 @@ class GenerationRoundTripTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             agentry.build_skill_reference("does/not/exist.md")
 
+    def test_build_skill_reference_rejects_traversing_rule_path(self):
+        with self.assertRaises(SystemExit):
+            agentry.build_skill_reference("../outside.md")
+
     def test_generate_skill_references_materializes_derived_files(self):
         manifest = self.repo.manifest_dict
         agentry.generate_skill_references(manifest, check=False, changed=[])
         target = self.repo.plugins_dir / "a" / "skills" / "skill-one" / "references" / "a.md"
         self.assertTrue(target.exists())
         self.assertNotIn("foo: bar", target.read_text(encoding="utf-8"))
+
+    def test_generate_skill_references_rejects_traversing_skill_name(self):
+        manifest = {
+            **self.repo.manifest_dict,
+            "plugins": [
+                {
+                    "name": "a",
+                    "description": "plugin a",
+                    "skillReferences": {"../outside": ["code-quality/a.md"]},
+                }
+            ],
+        }
+        with self.assertRaises(SystemExit):
+            agentry.generate_skill_references(manifest, check=False, changed=[])
 
     def test_cmd_generate_runs_end_to_end(self):
         ns = _make_namespace(target="all", check=False)
@@ -1494,6 +1545,17 @@ class InstallUninstallTests(unittest.TestCase):
         canonical = self.repo.rules_dir / "code-quality" / "a.md"
         self.assertEqual(link.resolve(), canonical.resolve())
 
+    def test_cmd_install_handles_existing_symlinked_rule(self):
+        args = _make_namespace(
+            tool="trae", plugin="a", component=["rules"],
+            project_dir=self.project, yes=True, symlink=True, dry_run=False,
+        )
+        agentry.cmd_install(args)
+        args.dry_run = True
+        agentry.cmd_install(args)
+        link = self.project / ".trae" / "rules" / "code-quality" / "a.md"
+        self.assertTrue(link.is_symlink())
+
     def test_cmd_install_dry_run_writes_nothing(self):
         args = _make_namespace(
             tool="trae", plugin="a", component=["rules"],
@@ -1501,6 +1563,27 @@ class InstallUninstallTests(unittest.TestCase):
         )
         agentry.cmd_install(args)
         self.assertFalse((self.project / ".trae").exists())
+
+    def test_cmd_install_rejects_traversing_rule_path(self):
+        manifest = {
+            **SAMPLE_MANIFEST_TWO,
+            "plugins": [
+                {
+                    "name": "a",
+                    "description": "plugin a",
+                    "rules": ["../outside.md"],
+                }
+            ],
+        }
+        self.repo.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        args = _make_namespace(
+            tool="trae", plugin="a", component=["rules"],
+            project_dir=self.project, yes=True, dry_run=False,
+        )
+        with self.assertRaises(SystemExit):
+            agentry.cmd_install(args)
+        self.assertFalse((self.project / ".trae").exists())
+        self.assertFalse((self.project / "outside.md").exists())
 
     def test_cmd_uninstall_removes_components(self):
         args_install = _make_namespace(
