@@ -58,6 +58,7 @@ This repo follows a PR-based flow; apply it on top of the `git-workflow` and `co
 - Name branches with the `type/short-description` form, where `short-description` is lowercase and hyphenated (for example, `fix/branch-naming-policy`).
 - Always ask for explicit confirmation before pushing a branch or opening/updating a pull request; approval to make a change locally does not authorize these shared, remote actions.
 - Use Conventional Commits for both commit messages and PR titles.
+- Add a brief commit body when the subject alone does not explain the important context, such as why the change exists, what user-facing behavior it adds, or why generated/dogfooding files changed.
 - Write the PR body to match `.github/pull_request_template.md`; `gh pr create --body` bypasses the template, so include its sections yourself. Check (`[x]`) each item when satisfied, or when it does not apply append `— N/A: <reason>`; leave a box unchecked only for outstanding work.
 - After a PR merges, switch back to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs (`git fetch --prune`). The remote branch is auto-deleted on merge.
 
