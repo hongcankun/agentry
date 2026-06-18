@@ -14,7 +14,7 @@ Subcommands:
 
 Delivery channels. Neither tool's plugin format has a "rules" component, so
 rules are never delivered by a marketplace install; ``install`` always copies
-them. Skills/subagents come through one of two channels:
+them. Skills/subagents/commands come through one of two channels:
 
 - marketplace — orchestrate the tool's own CLI (``claude``/``traecli``) to add the
   Agentry marketplace and install the selected plugins. These plugins are
@@ -27,8 +27,8 @@ them. Skills/subagents come through one of two channels:
 
 Pick a channel explicitly with ``--source {marketplace,checkout}``. Interactively,
 a ``--global`` run defaults to the marketplace channel and does not prompt for
-components; pass ``--source checkout`` (or ``--component``) to copy skills/agents
-from the checkout instead.
+components; pass ``--source checkout`` (or ``--component``) to copy
+skills/agents/commands from the checkout instead.
 
 ``uninstall`` mirrors this: the marketplace channel uninstalls the selected
 plugins via the tool CLI and removes the marketplace only once no Agentry plugin
@@ -45,8 +45,8 @@ Examples:
     python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
     python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality
 
-    # Copy skills and subagents directly from a checkout (--component selects checkout)
-    python3 scripts/agentry.py install --tool trae --component skills --component agents
+    # Copy skills, subagents, and commands directly from a checkout (--component selects checkout)
+    python3 scripts/agentry.py install --tool trae --component skills --component agents --component commands
 
     # Report-only check (exit 1 on drift), and global removal
     python3 scripts/agentry.py status --tool claude --global
@@ -75,10 +75,10 @@ RULES_DIR = REPO_ROOT / "rules"
 CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
 
-COMPONENTS = ("skills", "agents", "rules")
+COMPONENTS = ("skills", "agents", "commands", "rules")
 COMPONENT_CHOICES = COMPONENTS + ("all",)
 
-COMPONENT_TITLE = {"rules": "Rules", "skills": "Skills", "agents": "Agents"}
+COMPONENT_TITLE = {"rules": "Rules", "skills": "Skills", "agents": "Agents", "commands": "Commands"}
 
 FILE_REPORT_TAGS = {"missing", "synced", "stale"}
 PLUGIN_REPORT_TAGS = {
@@ -89,10 +89,20 @@ PLUGIN_REMOVE_ACTION_TAGS = {"would remove", "removed"}
 
 # Per-tool target directory for each component, relative to the project root
 # (project scope) or the home directory (global scope). Kept in sync with the
-# rule-manager and subagent-manager skill conventions.
+# rule-manager, subagent-manager, and command-manager skill conventions.
 TOOL_TARGETS = {
-    "claude": {"skills": ".claude/skills", "agents": ".claude/agents", "rules": ".claude/rules"},
-    "trae": {"skills": ".trae/skills", "agents": ".trae/agents", "rules": ".trae/rules"},
+    "claude": {
+        "skills": ".claude/skills",
+        "agents": ".claude/agents",
+        "commands": ".claude/commands",
+        "rules": ".claude/rules",
+    },
+    "trae": {
+        "skills": ".trae/skills",
+        "agents": ".trae/agents",
+        "commands": ".trae/commands",
+        "rules": ".trae/rules",
+    },
 }
 
 # The CLI binary that manages each tool's plugins/marketplaces. agentry.py shells
@@ -203,6 +213,13 @@ def plugin_component_entries(plugin, components):
                 "agents",
                 PLUGINS_DIR / plugin["name"] / "agents" / f"{agent}.md",
                 f"{agent}.md",
+            )
+    if "commands" in components:
+        for command in plugin.get("commands", []):
+            yield (
+                "commands",
+                PLUGINS_DIR / plugin["name"] / "commands" / f"{command}.md",
+                f"{command}.md",
             )
     if "rules" in components:
         for rule in plugin.get("rules", []):
@@ -927,16 +944,16 @@ def act_on_plugins_uninstall(args, manifest, plugins, interactive, action_width,
 def resolve_marketplace(args):
     """Decide the delivery channel from the command line. Returns True for marketplace.
 
-    Two channels deliver a plugin's skills/subagents: the marketplace (the tool's
-    own plugin system) and the checkout (copied from this repo). Rules are copied
-    in either. ``--source`` picks one explicitly; otherwise naming ``--component``
-    implies checkout (those files come from the checkout), and failing that a
-    ``--global`` run uses the marketplace while a project-scope run uses the
-    checkout. Marketplace plugins are inherently user-scoped, so that channel
-    forces ``--global`` (its rules follow to the user dirs). ``--source marketplace``
-    therefore cannot be combined with an explicit ``--component``. Decided before
-    any interactive prompt, so the component prompt can be skipped on the
-    marketplace channel.
+    Two channels deliver a plugin's skills/subagents/commands: the marketplace
+    (the tool's own plugin system) and the checkout (copied from this repo).
+    Rules are copied in either. ``--source`` picks one explicitly; otherwise
+    naming ``--component`` implies checkout (those files come from the checkout),
+    and failing that a ``--global`` run uses the marketplace while a project-scope
+    run uses the checkout. Marketplace plugins are inherently user-scoped, so
+    that channel forces ``--global`` (its rules follow to the user dirs).
+    ``--source marketplace`` therefore cannot be combined with an explicit
+    ``--component``. Decided before any interactive prompt, so the component
+    prompt can be skipped on the marketplace channel.
     """
     if args.source == "marketplace" and args.component is not None:
         sys.exit(
@@ -971,8 +988,8 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
     writes = not getattr(args, "status", False) and not removing
 
     # On the marketplace channel, components do not apply to a *write* (the tool
-    # delivers skills/agents; only rules are copied), so never prompt for them —
-    # pin to rules and exclude them from the "use defaults?" shortcut below.
+    # delivers skills/agents/commands; only rules are copied), so never prompt
+    # for them — pin to rules and exclude them from the "use defaults?" shortcut below.
     # status is read-only: components only pick which file types it reports, so
     # it stays promptable on either channel.
     component_unset = args.component is None and (not marketplace or getattr(args, "status", False))
@@ -997,7 +1014,12 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
             args.plugin = picked
 
     if component_unset and ask_optional:
-        args.component = choose("Which components?", ["rules", "skills", "agents", "all"], default="rules", multi=True)
+        args.component = choose(
+            "Which components?",
+            ["rules", "skills", "agents", "commands", "all"],
+            default="rules",
+            multi=True,
+        )
 
     if writes and not args.symlink and ask_optional:
         args.symlink = confirm("Symlink instead of copy?", default=False)
@@ -1168,7 +1190,7 @@ def cmd_install(args):
     # Two-phase plugin section: state (rendered inside print_header as the
     # "Plugins" report block), then action rows merged into the shared
     # "Changes" section after the file action loop. On the checkout channel,
-    # no plugin actions run (skills/agents come from the checkout), so the
+    # no plugin actions run (skills/agents/commands come from the checkout), so the
     # Plugins section is also skipped — it is pure tool CLI status and only
     # adds latency on a file-only run.
     manifest = load_manifest()
@@ -1253,7 +1275,7 @@ def cmd_install(args):
         counts["installed" if state == "missing" else "updated"] += 1
 
     # Phase 2: plugin actions after file actions. Rules ship via files
-    # (above), skills/agents via plugins — so the Changes section lists
+    # (above), skills/agents/commands via plugins — so the Changes section lists
     # file work first (deterministic from the plan), then plugin work
     # (in plugin selection order). The missing-binary case is guarded above.
     if marketplace and not args.status:
@@ -1640,8 +1662,9 @@ def add_selection_args(parser, *, writes):
         "--component",
         action="append",
         choices=COMPONENT_CHOICES,
-        help="Component types to act on (repeatable; use 'all' for skills, agents, and rules). "
-        "Default: rules only, since skills and subagents are delivered by the plugin marketplace.",
+        help="Component types to act on (repeatable; use 'all' for skills, agents, commands, "
+        "and rules). Default: rules only, since skills, subagents, and commands are delivered "
+        "by the plugin marketplace.",
     )
     parser.add_argument(
         "--global",
@@ -1700,7 +1723,7 @@ def main():
         "--source",
         choices=("marketplace", "checkout"),
         default=None,
-        help="Delivery channel for skills/subagents (rules are copied either way). 'marketplace' "
+        help="Delivery channel for skills/subagents/commands (rules are copied either way). 'marketplace' "
         "orchestrates the tool CLI to add the marketplace and install plugins; it is user-scoped, "
         "so it forces --global and cannot be combined with --component. 'checkout' copies "
         "components from this checkout, touching no marketplace. Default: marketplace for a "

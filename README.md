@@ -2,7 +2,7 @@
 
 A collection of reusable extensions for AI coding agents — skills, subagents, commands, and rules — following open agent conventions. The extensions are tool-agnostic and grouped into plugins; each AI tool's packaging is generated from a single canonical manifest, so no tool is privileged.
 
-- **Canonical source:** [`agentry.json`](./agentry.json) defines every skill, subagent, and rule and how they group into plugins.
+- **Canonical source:** [`agentry.json`](./agentry.json) defines every skill, subagent, command, and rule and how they group into plugins.
 - **Per-tool packaging is derived from it** — each tool's marketplace files are generated from the manifest, and an install script copies a plugin's rules (and optionally other components) into a tool's directories.
 
 ## Install
@@ -40,7 +40,7 @@ Update later with `traecli plugin marketplace update agentry`.
 `scripts/agentry.py` complements the marketplace. It reads `agentry.json` (so everything maps to the same plugins) and delivers a plugin's pieces through one of **two channels**:
 
 - **marketplace** — orchestrates the tool's own CLI (e.g. `traecli` / `claude`) to add the marketplace and install or remove the selected plugins. The marketplace channel is **user-scoped**, so it forces `--global` and cannot be combined with `--component`; it is the default for a `--global` run.
-- **checkout** — copies components straight from this checkout into the tool's directories and never touches the marketplace. It is the default at project scope. Passing `--component {rules,skills,agents,all}` (repeatable) implicitly selects it; `--source checkout` forces it.
+- **checkout** — copies components straight from this checkout into the tool's directories and never touches the marketplace. It is the default at project scope. Passing `--component {rules,skills,agents,commands,all}` (repeatable) implicitly selects it; `--source checkout` forces it.
 
 Rules are **never delivered by a plugin** (neither Claude Code nor Trae ship rules in their plugin format), so the script always copies them regardless of channel.
 
@@ -51,9 +51,9 @@ python3 scripts/agentry.py install --tool trae --global --plugin agentry-code-qu
 # Checkout channel (project scope): copy a plugin's rules into .trae/rules or .claude/rules
 python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
 
-# Checkout channel: copy skills and subagents from this checkout (for development, or tools
-# without marketplace support)
-python3 scripts/agentry.py install --tool trae --component skills --component agents
+# Checkout channel: copy skills, subagents, and commands from this checkout (for
+# development, or tools without marketplace support)
+python3 scripts/agentry.py install --tool trae --component skills --component agents --component commands
 ```
 
 A bare `install` run is **interactive**: it reports each item's state (missing / synced / stale vs the canonical source), then prompts on a TTY for any omitted selection (`--tool`, `--plugin`, `--component`s, `--symlink`) and before each action, including marketplace/plugin CLI calls. Pass `--defaults` to accept the default selections without asking, or `--yes` to auto-confirm every action.
@@ -71,11 +71,11 @@ Add `--symlink` to link components back to the checkout instead of copying, so t
 python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality --symlink
 ```
 
-Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--source {marketplace,checkout}` (default: marketplace for `--global` runs without `--component`, otherwise checkout), `--component {skills,agents,rules,all}` (repeatable; `all` expands to skills, agents, and rules; selects checkout; default: `rules`), `--symlink` (install only; default: copy), `--global` (default: project scope; forced by the marketplace channel), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
+Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--source {marketplace,checkout}` (default: marketplace for `--global` runs without `--component`, otherwise checkout), `--component {skills,agents,commands,rules,all}` (repeatable; `all` expands to skills, agents, commands, and rules; selects checkout; default: `rules`), `--symlink` (install only; default: copy), `--global` (default: project scope; forced by the marketplace channel), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
 
 ## Plugins
 
-Each plugin groups related extensions. Sources live under [`plugins/`](./plugins) (skills and subagents) and [`rules/`](./rules).
+Each plugin groups related extensions. Sources live under [`plugins/`](./plugins) (skills, subagents, and commands) and [`rules/`](./rules).
 
 ### [agentry-code-quality](./plugins/agentry-code-quality)
 
@@ -116,7 +116,7 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow — edi
 ## Repository layout
 
 - [`agentry.json`](./agentry.json) — canonical, tool-agnostic manifest. **Edit this**, then regenerate derived files.
-- [`plugins/`](./plugins) — each plugin's skills (`skills/<name>/SKILL.md`) and subagents (`agents/<name>.md`).
+- [`plugins/`](./plugins) — each plugin's skills (`skills/<name>/SKILL.md`), subagents (`agents/<name>.md`), and commands (`commands/<name>.md`).
 - [`rules/`](./rules) — tool-agnostic rules, organized by topic; associated with plugins via the manifest.
 - [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` a plugin's components into a tool's directories, and `generate` per-tool packaging from the manifest.
 - [`scripts/tests/`](./scripts/tests) — stdlib-only (`unittest`) tests for `scripts/agentry.py`.
@@ -134,7 +134,7 @@ python3 scripts/agentry.py generate          # regenerate all packaging (or pass
 python3 scripts/agentry.py generate --check  # verify up to date (for CI)
 ```
 
-Claude Code and Trae have separate plugin specs that happen to overlap for our content: Trae can read Claude's catalog as a fallback, but its own schema differs (e.g. `owner` is a string, not an object), so we ship a native `.trae-plugin/marketplace.json`. Plugin packages also differ — Claude uses a per-plugin `plugin.json`, while Trae auto-detects component dirs and uses `traecli.toml` inside a plugin package only for MCP servers, hooks, models, or tool-permissions. Agentry's plugins currently contain only skills and subagents, so no per-plugin manifest is required on Trae. If a plugin later adds MCP/hooks/models, `agentry.py generate` would need to emit a plugin-package `traecli.toml` under that plugin.
+Claude Code and Trae have separate plugin specs that happen to overlap for our content: Trae can read Claude's catalog as a fallback, but its own schema differs (e.g. `owner` is a string, not an object), so we ship a native `.trae-plugin/marketplace.json`. Plugin packages also differ — Claude uses a per-plugin `plugin.json`, while Trae auto-detects component dirs and uses `traecli.toml` inside a plugin package only for MCP servers, hooks, models, or tool-permissions. Agentry's plugins currently contain only skills, subagents, and commands, so no per-plugin manifest is required on Trae. If a plugin later adds MCP/hooks/models, `agentry.py generate` would need to emit a plugin-package `traecli.toml` under that plugin.
 
 Adding support for another tool means adding its targets to `scripts/agentry.py` and, if it has a package format, a generate target alongside the existing ones — without changing the canonical manifest.
 
@@ -148,7 +148,7 @@ Versions live in `agentry.json` and propagate to the generated packaging. Two le
 Use [SemVer](https://semver.org) for a plugin's content:
 
 - **patch** — wording fixes, clarifications, or non-behavioral edits to existing components.
-- **minor** — add a new skill, subagent, or rule to the plugin, or a backward-compatible capability.
+- **minor** — add a new skill, subagent, command, or rule to the plugin, or a backward-compatible capability.
 - **major** — remove or rename a component, or otherwise change behavior in a breaking way.
 
 Bump versions by editing `agentry.json`, then regenerate the packaging (`python3 scripts/agentry.py generate`).
