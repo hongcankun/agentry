@@ -36,12 +36,12 @@
     {
       "name": "agentry-git",
       "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "vcs",
       "keywords": ["git", "commits", "conventional-commits", "workflow"],
       "skills": ["git-workflow", "conventional-commits"],
       "agents": [],
-      "commands": [],
+      "commands": ["prepare-commit", "prepare-pr", "finish-pr"],
       "rules": ["vcs/conventional-commits.md"]
     },
     {
