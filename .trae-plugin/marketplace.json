@@ -23,8 +23,8 @@
     },
     {
       "name": "agentry-authoring",
-      "description": "Authoring skills for building AI agent extensions: create skills, subagents, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.2.1",
+      "description": "Authoring skills for building AI agent extensions: create skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
+      "version": "0.3.0",
       "source": "./plugins/agentry-authoring"
     },
     {
