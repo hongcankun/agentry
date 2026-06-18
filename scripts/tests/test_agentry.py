@@ -948,6 +948,16 @@ class ReportRenderingTests(unittest.TestCase):
         # "unknown" is the longest tag in the default list — 7 chars.
         self.assertGreaterEqual(len(tag_col), 7)
 
+    def test_marketplace_refresh_hint_uses_native_cli_commands(self):
+        self.assertEqual(
+            agentry.marketplace_refresh_hint("claude", "agentry"),
+            "claude plugin marketplace update agentry",
+        )
+        self.assertEqual(
+            agentry.marketplace_refresh_hint("trae", "agentry"),
+            "traecli plugin marketplace upgrade agentry",
+        )
+
     def test_print_grouped_report_writes_all_states(self):
         # Fabricate a plan; we only care about print() output.
         plan = [
@@ -1407,7 +1417,7 @@ class InstallUninstallTests(unittest.TestCase):
         self.project.mkdir()
         # Patch stdout to avoid noise.
         self._patcher = mock.patch("builtins.print")
-        self._patcher.start()
+        self.print_mock = self._patcher.start()
 
     def tearDown(self):
         self._patcher.stop()
@@ -1539,6 +1549,29 @@ class InstallUninstallTests(unittest.TestCase):
         rv = agentry.cmd_install(args)
         self.assertFalse((self.project / ".trae").exists())
         self.assertEqual(rv, 1)
+
+    def test_cmd_status_prints_marketplace_refresh_hint_after_summary(self):
+        args = _make_namespace(
+            tool="trae", plugin="a", component=["rules"],
+            project_dir=self.project, status=True,
+        )
+
+        def fake_run(binary, cmd_args, dry_run, capture=False):
+            if "marketplace" in cmd_args:
+                return True, "✓ test-agentry\n", ""
+            return True, "", ""
+        with mock.patch.object(agentry, "run_tool_command", side_effect=fake_run), \
+                mock.patch.object(agentry, "resolve_tool_binary", return_value="/bin/fake"):
+            agentry.cmd_install(args)
+        lines = [
+            agentry._strip_color(str(c.args[0]))
+            for c in self.print_mock.call_args_list
+            if c.args
+        ]
+        summary_index = next(i for i, line in enumerate(lines) if "Summary:" in line)
+        hint_index = next(i for i, line in enumerate(lines) if "Hint: refresh with" in line)
+        self.assertGreater(hint_index, summary_index)
+        self.assertIn("traecli plugin marketplace upgrade test-agentry", lines[hint_index])
 
     def test_cmd_install_marketplace_aborts_when_binary_missing_and_not_dry_run(self):
         args = _make_namespace(
