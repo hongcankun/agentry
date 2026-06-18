@@ -12,15 +12,17 @@ Both Claude Code and Trae install Agentry as a plugin marketplace. Each tool rea
 ### Claude Code
 
 ```
-/plugin marketplace add hongcankun/agentry
-/plugin install agentry-code-quality@agentry
-/plugin install agentry-security@agentry
-/plugin install agentry-git@agentry
-/plugin install agentry-authoring@agentry
-/plugin install agentry-docs@agentry
+claude plugin marketplace add hongcankun/agentry
+claude plugin install agentry-code-quality@agentry
+claude plugin install agentry-security@agentry
+claude plugin install agentry-git@agentry
+claude plugin install agentry-authoring@agentry
+claude plugin install agentry-docs@agentry
 ```
 
-Update later with `/plugin marketplace update agentry`.
+Update later with `claude plugin marketplace update agentry`.
+
+In the interactive Claude Code UI, the same plugin commands are available as slash commands, for example `/plugin marketplace add hongcankun/agentry` and `/plugin install agentry-code-quality@agentry`.
 
 ### Trae
 
@@ -33,7 +35,9 @@ traecli plugin install agentry-authoring@agentry
 traecli plugin install agentry-docs@agentry
 ```
 
-Update later with `traecli plugin marketplace update agentry`.
+Update later with `traecli plugin marketplace upgrade agentry`.
+
+In the interactive Trae UI, use the same commands with a leading slash, for example `/plugin marketplace add hongcankun/agentry` and `/plugin install agentry-code-quality@agentry`.
 
 ### The install script
 
