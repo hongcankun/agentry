@@ -12,13 +12,13 @@
   "plugins": [
     {
       "name": "agentry-code-quality",
-      "description": "Code review skill and a code-reviewer subagent that catch correctness, security, and maintainability issues and return prioritized, actionable feedback.",
-      "version": "0.3.0",
+      "description": "Code review skill, slash command, and code-reviewer subagent that catch correctness, security, and maintainability issues and return prioritized, actionable feedback.",
+      "version": "0.4.0",
       "category": "code-quality",
       "keywords": ["code-review", "security", "subagent", "code-style"],
       "skills": ["code-review"],
       "agents": ["code-reviewer"],
-      "commands": [],
+      "commands": ["review-code"],
       "rules": ["code-quality/code-review.md", "code-quality/code-style.md"],
       "skillReferences": { "code-review": ["code-quality/code-style.md"] }
     },
