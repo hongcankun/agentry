@@ -110,6 +110,10 @@ TOOL_TARGETS = {
 # out to these (no shell) to add the marketplace and install/uninstall plugins
 # when orchestrating; resolved on PATH via shutil.which at call time.
 TOOL_BINARIES = {"claude": "claude", "trae": "traecli"}
+MARKETPLACE_REFRESH_COMMANDS = {
+    "claude": "claude plugin marketplace update {name}",
+    "trae": "traecli plugin marketplace upgrade {name}",
+}
 
 # Install states for a planned (src -> dest) job that the installer must act on.
 ACTION_STATES = ("missing", "copied-stale", "stale-link")
@@ -373,6 +377,34 @@ def plugin_section_header():
     The tool name is already shown in the run header above, so it is omitted here.
     """
     print(colorize(f"{indent()}Plugins", "cyan"))
+
+
+def marketplace_refresh_hint(tool, name):
+    """Return the native CLI command that refreshes marketplace metadata."""
+    template = MARKETPLACE_REFRESH_COMMANDS.get(tool)
+    if template is None:
+        return None
+    return template.format(name=name)
+
+
+def marketplace_refresh_hint_line(args, manifest, state):
+    """Return the post-summary marketplace refresh hint, when state is known."""
+    if not state or not state.get("mkt_ok"):
+        return None
+    mkt = marketplace_name(manifest)
+    if mkt not in state.get("markets", set()):
+        return None
+    refresh = marketplace_refresh_hint(args.tool, mkt)
+    if refresh is None:
+        return None
+    return f"{indent()}Hint: refresh with `{refresh}`"
+
+
+def print_marketplace_refresh_hint(args, manifest, state):
+    """Print a dim post-summary hint for refreshing a configured marketplace."""
+    line = marketplace_refresh_hint_line(args, manifest, state)
+    if line:
+        print(colorize(line, "dim"))
 
 
 def print_grouped_report(plan, label_width):
@@ -1337,6 +1369,8 @@ def cmd_install(args):
         (not args.status and (counts["skipped"] > 0 or plugin_unresolved > 0))
     mark = ("⚠️  " if unresolved else "✅ ") if _USE_EMOJI else ""
     print(mark + colorize("Summary: ", "cyan") + ", ".join(parts))
+    if should_report_plugins(args, marketplace):
+        print_marketplace_refresh_hint(args, manifest, plugin_state["snapshot"])
 
     if args.status and any(needs_action(state) for *_, state in plan):
         return 1
