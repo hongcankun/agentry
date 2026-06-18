@@ -626,12 +626,14 @@ SAMPLE_MANIFEST_TWO = {
             "description": "plugin a",
             "skills": ["skill-one"],
             "agents": ["agent-one"],
+            "commands": ["command-one"],
             "rules": ["code-quality/a.md", "shared.md"],
         },
         {
             "name": "b",
             "description": "plugin b",
             "skills": ["skill-two"],
+            "commands": [],
             "rules": ["shared.md"],
         },
     ],
@@ -679,6 +681,10 @@ class _FakeRepo:
                 agent_dir = base / "agents"
                 agent_dir.mkdir(parents=True, exist_ok=True)
                 (agent_dir / f"{agent}.md").write_text(f"# {agent}\n", encoding="utf-8")
+            for command in plugin.get("commands", []):
+                command_dir = base / "commands"
+                command_dir.mkdir(parents=True, exist_ok=True)
+                (command_dir / f"{command}.md").write_text(f"# {command}\n", encoding="utf-8")
             for rule in plugin.get("rules", []):
                 p = self.rules_dir / rule
                 p.parent.mkdir(parents=True, exist_ok=True)
@@ -914,13 +920,14 @@ class ReportRenderingTests(unittest.TestCase):
             ("rules", None, None, "rules/a.md", "missing"),
             ("skills", None, None, "skills/a", "copied-current"),
             ("agents", None, None, "agents/a.md", "copied-stale"),
+            ("commands", None, None, "commands/a.md", "copied-current"),
             ("rules", None, None, "rules/b.md", "linked"),
             ("rules", None, None, "rules/c.md", "stale-link"),
         ]
         with mock.patch("builtins.print") as pr:
             agentry.print_grouped_report(plan, 10)
             joined = "\n".join(str(c.args[0]) if c.args else "" for c in pr.call_args_list)
-        for token in ("missing", "synced", "stale", "rules", "skills", "agents"):
+        for token in ("missing", "synced", "stale", "rules", "skills", "agents", "commands"):
             self.assertIn(token, joined)
 
     def test_print_header_returns_plan_and_label_width(self):
@@ -968,9 +975,10 @@ class DeliveryChannelTests(unittest.TestCase):
         self.assertFalse(agentry.resolve_marketplace(ns))
 
     def test_resolve_marketplace_rejects_marketplace_plus_component(self):
-        ns = _make_namespace(source="marketplace", component=["skills"])
-        with self.assertRaises(SystemExit):
-            agentry.resolve_marketplace(ns)
+        for component in ("skills", "agents", "commands", "rules"):
+            ns = _make_namespace(source="marketplace", component=[component])
+            with self.assertRaises(SystemExit):
+                agentry.resolve_marketplace(ns)
 
     def test_resolve_marketplace_rejects_marketplace_plus_component_all(self):
         ns = _make_namespace(source="marketplace", component=["all"])
@@ -996,12 +1004,12 @@ class DeliveryChannelTests(unittest.TestCase):
                 agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
 
     def test_resolve_selection_honors_explicit_component(self):
-        ns = _make_namespace(component=["skills", "rules"])
+        ns = _make_namespace(component=["skills", "commands", "rules"])
         with mock.patch.object(agentry, "sys") as fake_sys:
             fake_sys.stdin.isatty.return_value = False
             fake_sys.stdout.isatty.return_value = False
             components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
-        self.assertEqual(components, {"skills", "rules"})
+        self.assertEqual(components, {"skills", "commands", "rules"})
 
     def test_resolve_selection_expands_component_all(self):
         ns = _make_namespace(component=["all"])
@@ -1370,6 +1378,18 @@ class InstallUninstallTests(unittest.TestCase):
         # Skills/agents are not copied because components=["rules"].
         skill_dir = self.project / ".trae" / "skills"
         self.assertFalse(skill_dir.exists())
+        command_dir = self.project / ".trae" / "commands"
+        self.assertFalse(command_dir.exists())
+
+    def test_cmd_install_checkout_copies_commands(self):
+        args = _make_namespace(
+            tool="trae", plugin="a", component=["commands"],
+            project_dir=self.project, yes=True, dry_run=False,
+        )
+        agentry.cmd_install(args)
+        command = self.project / ".trae" / "commands" / "command-one.md"
+        self.assertTrue(command.exists(), f"expected {command}")
+        self.assertEqual(command.read_text(encoding="utf-8"), "# command-one\n")
 
     def test_cmd_install_checkout_skips_identical_rerun(self):
         args = _make_namespace(

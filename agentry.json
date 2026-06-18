@@ -18,6 +18,7 @@
       "keywords": ["code-review", "security", "subagent", "code-style"],
       "skills": ["code-review"],
       "agents": ["code-reviewer"],
+      "commands": [],
       "rules": ["code-quality/code-review.md", "code-quality/code-style.md"],
       "skillReferences": { "code-review": ["code-quality/code-style.md"] }
     },
@@ -29,6 +30,7 @@
       "keywords": ["security", "audit", "vulnerability", "threat-model", "appsec"],
       "skills": ["security-audit"],
       "agents": ["security-auditor"],
+      "commands": [],
       "rules": ["security/security-audit.md"]
     },
     {
@@ -39,6 +41,7 @@
       "keywords": ["git", "commits", "conventional-commits", "workflow"],
       "skills": ["git-workflow", "conventional-commits"],
       "agents": [],
+      "commands": [],
       "rules": ["vcs/conventional-commits.md"]
     },
     {
@@ -49,6 +52,7 @@
       "keywords": ["skills", "subagents", "commands", "rules", "prompts", "plugins"],
       "skills": ["skill-manager", "subagent-manager", "command-manager", "rule-manager", "prompt-template-manager", "plugin-manager"],
       "agents": [],
+      "commands": [],
       "rules": []
     },
     {
@@ -59,6 +63,7 @@
       "keywords": ["readme", "documentation"],
       "skills": ["readme-manager"],
       "agents": [],
+      "commands": [],
       "rules": []
     }
   ]
