@@ -23,7 +23,8 @@ If the target branch, feature branch, or merge status is unclear, ask one concis
    - use the hosting CLI when available to confirm the PR is merged.
 3. Confirm that the feature branch is merged into the base branch or that the remote PR is merged. If merge status cannot be confirmed, ask before deleting the branch.
 4. Present the planned actions, such as switching to the base branch, fast-forwarding it, deleting the local feature branch, and pruning stale remote-tracking refs.
-5. Ask for explicit confirmation before running any branch deletion, pull, fetch prune, or other shared-state cleanup.
+5. If the feature branch is confirmed merged (locally or via hosting CLI) and the worktree is clean, proceed without an extra confirmation — branch deletion with `git branch -d` and ff-only pulls are reversible. Stop and ask only when merge status is unclear, the worktree has uncommitted work, or a destructive shortcut (e.g. `git branch -D`) would be used.
+6. Otherwise ask for explicit confirmation when the planned actions include destructive or ambiguous steps, such as switching to the base branch, pulling, pruning, or deleting anything.
 6. After confirmation:
    - switch to the base branch;
    - update it with a fast-forward only pull, such as `git pull --ff-only`;
