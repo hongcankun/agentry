@@ -1,0 +1,1 @@
+../../plugins/agentry-security/commands/audit-security.md
