@@ -35,6 +35,7 @@ A new plugin is a catalog-level change: add it to `agentry.json` under `plugins`
 
 ## Commits and pull requests
 
+- Name branches with the `type/short-description` form, where `short-description` is lowercase and hyphenated (for example, `fix/branch-naming-policy`).
 - This repo follows [Conventional Commits](https://www.conventionalcommits.org/) — see the `conventional-commits` skill in the `agentry-git` plugin.
 - Keep each PR focused on one change, with a clear description of what and why.
 - Confirm the validation commands above pass and the generated packaging is committed alongside your source edits.
