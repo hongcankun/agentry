@@ -40,7 +40,7 @@ Update later with `traecli plugin marketplace update agentry`.
 `scripts/agentry.py` complements the marketplace. It reads `agentry.json` (so everything maps to the same plugins) and delivers a plugin's pieces through one of **two channels**:
 
 - **marketplace** — orchestrates the tool's own CLI (e.g. `traecli` / `claude`) to add the marketplace and install or remove the selected plugins. The marketplace channel is **user-scoped**, so it forces `--global` and cannot be combined with `--component`; it is the default for a `--global` run.
-- **checkout** — copies components straight from this checkout into the tool's directories and never touches the marketplace. It is the default at project scope. Passing `--component {rules,skills,agents,commands,all}` (repeatable) implicitly selects it; `--source checkout` forces it.
+- **checkout** — copies components straight from this checkout into the tool's directories and never touches the marketplace. An omitted `--component` means all components on this channel. It is the default at project scope. Passing `--component {rules,skills,agents,commands,all}` (repeatable) implicitly selects it; `--source checkout` forces it.
 
 Rules are **never delivered by a plugin** (neither Claude Code nor Trae ship rules in their plugin format), so the script always copies them regardless of channel.
 
@@ -48,7 +48,7 @@ Rules are **never delivered by a plugin** (neither Claude Code nor Trae ship rul
 # Marketplace channel (user scope): add the marketplace + install the plugin, then copy rules
 python3 scripts/agentry.py install --tool trae --global --plugin agentry-code-quality --yes
 
-# Checkout channel (project scope): copy a plugin's rules into .trae/rules or .claude/rules
+# Checkout channel (project scope): copy all of a plugin's components
 python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
 
 # Checkout channel: copy skills, subagents, and commands from this checkout (for
@@ -71,7 +71,7 @@ Add `--symlink` to link components back to the checkout instead of copying, so t
 python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality --symlink
 ```
 
-Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--source {marketplace,checkout}` (default: marketplace for `--global` runs without `--component`, otherwise checkout), `--component {skills,agents,commands,rules,all}` (repeatable; `all` expands to skills, agents, commands, and rules; selects checkout; default: `rules`), `--symlink` (install only; default: copy), `--global` (default: project scope; forced by the marketplace channel), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
+Common flags (any omitted selection is prompted interactively, or takes the noted default): `--tool {claude,trae}` (required non-interactively), `--plugin` (default: all plugins), `--source {marketplace,checkout}` (default: marketplace for `--global` runs without `--component`, otherwise checkout), `--component {skills,agents,commands,rules,all}` (repeatable; `all` expands to skills, agents, commands, and rules; selects checkout; default: all components for checkout runs, `rules` for marketplace runs), `--symlink` (install only; default: copy), `--global` (default: project scope; forced by the marketplace channel), `--project-dir`, `--yes`/`-y` (auto-confirm actions), `--defaults` (accept default selections without prompting), `--color {auto,always,never}`, `--dry-run`, `--force`.
 
 ## Plugins
 

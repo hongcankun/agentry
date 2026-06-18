@@ -22,8 +22,9 @@ them. Skills/subagents/commands come through one of two channels:
   project config). Used by default for a ``--global`` run.
 - checkout — copy the ``--component`` selection straight from this checkout and
   never touch the tool CLI — for development, or tools without marketplace
-  support. Used by default at project scope. ``--source checkout`` forces it, and
-  naming ``--component`` selects it (those files come from the checkout).
+  support. An omitted ``--component`` means all components on this channel.
+  Used by default at project scope. ``--source checkout`` forces it, and naming
+  ``--component`` selects it (those files come from the checkout).
 
 Pick a channel explicitly with ``--source {marketplace,checkout}``. Interactively,
 a ``--global`` run defaults to the marketplace channel and does not prompt for
@@ -41,7 +42,7 @@ Examples:
     python3 scripts/agentry.py install --tool claude --global --plugin agentry-code-quality
     python3 scripts/agentry.py install --tool trae --global --plugin agentry-code-quality --yes
 
-    # Copy a plugin's rules at project scope (checkout channel, file-only)
+    # Copy all components at project scope (checkout channel, file-only)
     python3 scripts/agentry.py install --tool claude --plugin agentry-code-quality
     python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality
 
@@ -986,6 +987,7 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
         args.tool = choose("Which tool?", sorted(TOOL_TARGETS))
 
     writes = not getattr(args, "status", False) and not removing
+    default_components = set(COMPONENTS) if not marketplace else {"rules"}
 
     # On the marketplace channel, components do not apply to a *write* (the tool
     # delivers skills/agents/commands; only rules are copied), so never prompt
@@ -999,7 +1001,7 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
     # Accepting is equivalent to --defaults.
     unset = args.plugin is None or component_unset or (writes and not args.symlink)
     if interactive and not args.defaults and unset:
-        comps = ", ".join(sorted(args.component)) if args.component else "rules"
+        comps = ", ".join(sorted(args.component)) if args.component else ", ".join(sorted(default_components))
         defaults_desc = [f"plugin: {args.plugin or 'all'}", f"components: {comps}"]
         if writes:
             defaults_desc.append(f"mode: {'symlink' if args.symlink else 'copy'}")
@@ -1017,7 +1019,7 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
         args.component = choose(
             "Which components?",
             ["rules", "skills", "agents", "commands", "all"],
-            default="rules",
+            default="all" if default_components == set(COMPONENTS) else "rules",
             multi=True,
         )
 
@@ -1026,7 +1028,7 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
 
     if args.component and "all" in args.component:
         return set(COMPONENTS)
-    return set(args.component) if args.component else {"rules"}
+    return set(args.component) if args.component else default_components
 
 
 def file_action_labels(action, args):
@@ -1663,8 +1665,8 @@ def add_selection_args(parser, *, writes):
         action="append",
         choices=COMPONENT_CHOICES,
         help="Component types to act on (repeatable; use 'all' for skills, agents, commands, "
-        "and rules). Default: rules only, since skills, subagents, and commands are delivered "
-        "by the plugin marketplace.",
+        "and rules). Default: all components for checkout runs; rules only for marketplace "
+        "runs, since skills, subagents, and commands are delivered by the plugin marketplace.",
     )
     parser.add_argument(
         "--global",

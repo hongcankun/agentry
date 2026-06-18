@@ -985,13 +985,31 @@ class DeliveryChannelTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             agentry.resolve_marketplace(ns)
 
-    def test_resolve_selection_default_components(self):
+    def test_resolve_selection_default_project_checkout_components(self):
         ns = _make_namespace()
         with mock.patch.object(agentry, "sys") as fake_sys:
             fake_sys.stdin.isatty.return_value = False
             fake_sys.stdout.isatty.return_value = False
             fake_sys.exit = sys.exit
             components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
+        self.assertEqual(components, set(agentry.COMPONENTS))
+
+    def test_resolve_selection_default_global_checkout_components(self):
+        ns = _make_namespace(global_scope=True, source="checkout")
+        with mock.patch.object(agentry, "sys") as fake_sys:
+            fake_sys.stdin.isatty.return_value = False
+            fake_sys.stdout.isatty.return_value = False
+            fake_sys.exit = sys.exit
+            components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
+        self.assertEqual(components, set(agentry.COMPONENTS))
+
+    def test_resolve_selection_default_marketplace_components(self):
+        ns = _make_namespace(global_scope=True)
+        with mock.patch.object(agentry, "sys") as fake_sys:
+            fake_sys.stdin.isatty.return_value = False
+            fake_sys.stdout.isatty.return_value = False
+            fake_sys.exit = sys.exit
+            components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=True)
         self.assertEqual(components, {"rules"})
 
     def test_resolve_selection_explicit_tool_required_when_non_interactive(self):
@@ -1380,6 +1398,22 @@ class InstallUninstallTests(unittest.TestCase):
         self.assertFalse(skill_dir.exists())
         command_dir = self.project / ".trae" / "commands"
         self.assertFalse(command_dir.exists())
+
+    def test_cmd_install_project_checkout_defaults_to_all_components(self):
+        args = _make_namespace(
+            tool="trae", plugin="a",
+            project_dir=self.project, yes=True, dry_run=False,
+        )
+        agentry.cmd_install(args)
+        expected = [
+            self.project / ".trae" / "skills" / "skill-one" / "SKILL.md",
+            self.project / ".trae" / "agents" / "agent-one.md",
+            self.project / ".trae" / "commands" / "command-one.md",
+            self.project / ".trae" / "rules" / "code-quality" / "a.md",
+            self.project / ".trae" / "rules" / "shared.md",
+        ]
+        for path in expected:
+            self.assertTrue(path.exists(), f"expected {path}")
 
     def test_cmd_install_checkout_copies_commands(self):
         args = _make_namespace(
