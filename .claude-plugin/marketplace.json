@@ -14,11 +14,14 @@
     {
       "name": "agentry-code-quality",
       "source": "./agentry-code-quality",
-      "description": "Code review skill, slash command, and code-reviewer subagent that catch correctness, security, and maintainability issues and return prioritized, actionable feedback.",
-      "version": "0.4.0",
+      "description": "Code review and test-engineering skills, slash command, and code-reviewer subagent that catch correctness, security, maintainability, and test-quality issues with actionable guidance.",
+      "version": "0.5.0",
       "category": "code-quality",
       "keywords": [
         "code-review",
+        "testing",
+        "test-engineering",
+        "coverage",
         "security",
         "subagent",
         "code-style"

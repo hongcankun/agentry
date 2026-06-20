@@ -84,6 +84,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 ### [agentry-code-quality](./plugins/agentry-code-quality)
 
 - **code-review** skill: Review code changes for correctness, readability, security, performance, and maintainability, then deliver prioritized, actionable feedback. Use when a user asks to review a diff, pull request, commit, branch, or file, or wants feedback on code they wrote or modified.
+- **test-engineering** skill: Write, update, debug, and review automated test code by identifying behavior to cover, matching the project's test framework and style, adding focused assertions or fixtures, and validating the result. Use when the user asks to add tests, improve coverage, fix failing tests, review test code, or design a testing plan.
 - **review-code** command: Review local changes, a branch, commit range, pull request, merge request, diff, or file for code-quality issues.
 - **code-reviewer** agent: Reviews code changes for correctness, security, readability, performance, and maintainability, then returns prioritized, actionable feedback. Use proactively after writing or modifying code, or when reviewing a diff, pull request, merge request, commit, branch, or file.
 - **code-quality/code-review** rule: Policy for when code review is required, the gates a change must pass before merging, and approval criteria; defers the review procedure to the `code-review` skill.
