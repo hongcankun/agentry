@@ -159,6 +159,11 @@ class ParsePluginListTests(unittest.TestCase):
         # "not installed" for the purposes of origin-based decisions).
         self.assertNotIn("other-thing", result)
 
+    def test_parse_installed_plugins_unknown_origin_defaults_to_marketplace(self):
+        text = "✓ code-review@agentry\n    From registry: agentry\n"
+        result = agentry.parse_installed_plugins(text)
+        self.assertEqual(result["code-review@agentry"], "marketplace")
+
     def test_parse_installed_plugins_empty(self):
         self.assertEqual(agentry.parse_installed_plugins(""), {})
         self.assertEqual(agentry.parse_installed_plugins("\n\n  \n"), {})
@@ -407,6 +412,16 @@ class InstallPlanAndStateTests(unittest.TestCase):
         self._mkfile(dest_dir / "a.txt", "different")
         self.assertEqual(agentry.classify_state(src_dir, dest_dir), "copied-stale")
 
+    def test_dirs_equal_false_when_destination_has_extra_file(self):
+        src_dir = self.tmp / "src"
+        dest_dir = self.tmp / "dest"
+        src_dir.mkdir()
+        dest_dir.mkdir()
+        self._mkfile(src_dir / "a.txt", "a")
+        self._mkfile(dest_dir / "a.txt", "a")
+        self._mkfile(dest_dir / "extra.txt", "extra")
+        self.assertFalse(agentry.dirs_equal(src_dir, dest_dir))
+
     def test_action_verbs_and_action_state_set(self):
         for state in ("missing", "copied-stale", "stale-link"):
             self.assertTrue(agentry.needs_action(state))
@@ -419,6 +434,12 @@ class InstallPlanAndStateTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             agentry.validate_path_fragment("../outside", "rule path", allow_nested=True)
 
+    def test_validate_path_fragment_rejects_empty_and_non_string(self):
+        for value in ("", None):
+            with self.subTest(value=value):
+                with self.assertRaises(SystemExit):
+                    agentry.validate_path_fragment(value, "rule path", allow_nested=True)
+
     def test_validate_path_fragment_rejects_nested_component_name(self):
         with self.assertRaises(SystemExit):
             agentry.validate_path_fragment("nested/skill", "skill name", allow_nested=False)
@@ -426,6 +447,15 @@ class InstallPlanAndStateTests(unittest.TestCase):
     def test_confined_path_rejects_escaped_destination(self):
         with self.assertRaises(SystemExit):
             agentry.confined_path(self.tmp / "base", "../outside", "destination")
+
+    def test_confined_leaf_path_rejects_escaped_parent_symlink(self):
+        base = self.tmp / "base"
+        outside = self.tmp / "outside"
+        base.mkdir()
+        outside.mkdir()
+        (base / "link-dir").symlink_to(outside)
+        with self.assertRaises(SystemExit):
+            agentry.confined_leaf_path(base, "link-dir/dest.md", "destination")
 
     def test_confined_leaf_path_preserves_leaf_symlink(self):
         base = self.tmp / "base"
@@ -465,6 +495,13 @@ class InstallPlanAndStateTests(unittest.TestCase):
         self.assertEqual(result, "skipped")
         self.assertEqual(dest.read_text(encoding="utf-8"), "old")
 
+    def test_install_one_skips_identical_path_without_force(self):
+        src = self.tmp / "source.md"
+        self._mkfile(src, "body")
+        result = agentry.install_one(src, src, dry_run=False, force=False, symlink=False, quiet=True)
+        self.assertEqual(result, "skipped")
+        self.assertEqual(src.read_text(encoding="utf-8"), "body")
+
     def test_install_one_overwrites_with_force(self):
         src = self.tmp / "source.md"
         dest = self.tmp / "dest.md"
@@ -482,9 +519,26 @@ class InstallPlanAndStateTests(unittest.TestCase):
         self.assertEqual(result, "installed")
         self.assertFalse(dest.exists())
 
+    def test_install_one_force_replaces_directory_with_file(self):
+        src = self.tmp / "source.md"
+        dest = self.tmp / "dest"
+        self._mkfile(src, "new")
+        dest.mkdir()
+        self._mkfile(dest / "old.txt", "old")
+        result = agentry.install_one(src, dest, dry_run=False, force=True, symlink=False, quiet=True)
+        self.assertEqual(result, "installed")
+        self.assertTrue(dest.is_file())
+        self.assertEqual(dest.read_text(encoding="utf-8"), "new")
+
     def test_remove_one_deletes_file(self):
         dest = self.tmp / "dest.md"
         self._mkfile(dest, "body")
+        agentry.remove_one(dest, dry_run=False)
+        self.assertFalse(dest.exists())
+
+    def test_remove_one_deletes_directory(self):
+        dest = self.tmp / "dest"
+        self._mkfile(dest / "nested" / "body.md", "body")
         agentry.remove_one(dest, dry_run=False)
         self.assertFalse(dest.exists())
 
@@ -872,6 +926,11 @@ class PromptTests(unittest.TestCase):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value="b"):
             self.assertEqual(agentry.choose("?", ["a", "b", "c"]), "b")
 
+    def test_choose_rejects_invalid_until_valid(self):
+        inputs = iter(["99", "b"])
+        with self._redirect_tty(isatty=False), mock.patch("builtins.input", lambda *a, **kw: next(inputs)):
+            self.assertEqual(agentry.choose("?", ["a", "b", "c"]), "b")
+
     def test_choose_default_when_empty(self):
         with self._redirect_tty(isatty=False), mock.patch("builtins.input", return_value=""):
             self.assertEqual(agentry.choose("?", ["a", "b", "c"], default="b"), "b")
@@ -981,6 +1040,24 @@ class ReportRenderingTests(unittest.TestCase):
             agentry.marketplace_refresh_hint("trae", "agentry"),
             "traecli plugin marketplace upgrade agentry",
         )
+
+    def test_marketplace_refresh_hint_unknown_tool_is_none(self):
+        self.assertIsNone(agentry.marketplace_refresh_hint("unknown", "agentry"))
+
+    def test_marketplace_refresh_hint_line_only_when_marketplace_present(self):
+        args = _make_namespace(tool="trae")
+        manifest = {"name": "test-agentry"}
+        self.assertIsNone(agentry.marketplace_refresh_hint_line(args, manifest, None))
+        self.assertIsNone(
+            agentry.marketplace_refresh_hint_line(args, manifest, {"mkt_ok": False, "markets": set()})
+        )
+        self.assertIsNone(
+            agentry.marketplace_refresh_hint_line(args, manifest, {"mkt_ok": True, "markets": set()})
+        )
+        line = agentry.marketplace_refresh_hint_line(
+            args, manifest, {"mkt_ok": True, "markets": {"test-agentry"}}
+        )
+        self.assertIn("traecli plugin marketplace upgrade test-agentry", line)
 
     def test_print_grouped_report_writes_all_states(self):
         # Fabricate a plan; we only care about print() output.
@@ -1113,6 +1190,21 @@ class DeliveryChannelTests(unittest.TestCase):
             components = agentry.resolve_selection(ns, [{"name": "a"}], marketplace=False)
         self.assertEqual(components, set(agentry.COMPONENTS))
 
+    def test_resolve_selection_interactive_prompts_for_tool_plugin_component_and_symlink(self):
+        ns = _make_namespace(tool=None, defaults=False)
+        choices = iter(["trae", "a", ["rules"]])
+
+        with mock.patch.object(sys.stdin, "isatty", return_value=True), \
+                mock.patch.object(sys.stdout, "isatty", return_value=True), \
+                mock.patch.object(agentry, "confirm", side_effect=[False, True]), \
+                mock.patch.object(agentry, "choose", side_effect=lambda *a, **kw: next(choices)):
+            components = agentry.resolve_selection(ns, [{"name": "a"}, {"name": "b"}], marketplace=False)
+
+        self.assertEqual(ns.tool, "trae")
+        self.assertEqual(ns.plugin, "a")
+        self.assertTrue(ns.symlink)
+        self.assertEqual(components, {"rules"})
+
 
 # ---------------------------------------------------------------------------
 # Plugin orchestration helpers (marketplace queries, install/uninstall actions)
@@ -1200,6 +1292,23 @@ class PluginOrchestrationTests(unittest.TestCase):
         self.assertIn("test-agentry", snap["markets"])
         self.assertIn("a", snap["installed"])
 
+    def test_report_plugin_state_marks_query_failures_unknown(self):
+        args = _make_namespace(tool="trae")
+        manifest = self.repo.manifest_dict
+
+        def fake_run(binary, cmd_args, dry_run, capture=False):
+            return False, "", "failed"
+
+        with mock.patch.object(agentry, "run_tool_command", side_effect=fake_run), \
+                mock.patch.object(agentry, "resolve_tool_binary", return_value="/bin/fake"), \
+                mock.patch("builtins.print") as pr:
+            snap = agentry.report_plugin_state(args, manifest, manifest["plugins"])
+
+        self.assertFalse(snap["mkt_ok"])
+        self.assertFalse(snap["list_ok"])
+        text = "\n".join(agentry._strip_color(str(c.args[0])) for c in pr.call_args_list if c.args)
+        self.assertIn("query failed", text)
+
     def test_act_on_plugins_install_happy_path_yes(self):
         args = _make_namespace(tool="trae", yes=True, dry_run=False)
         manifest = self.repo.manifest_dict
@@ -1261,6 +1370,28 @@ class PluginOrchestrationTests(unittest.TestCase):
         self.assertIn("marketplace add", joined)
         self.assertIn("plugin install", joined)
 
+    def test_act_on_plugins_install_declined_marketplace_skips_plugins(self):
+        args = _make_namespace(tool="trae", yes=False, dry_run=False)
+        manifest = self.repo.manifest_dict
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": set(),
+            "installed": {},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        with mock.patch.object(agentry, "orchestrate_confirm", return_value=False), \
+                mock.patch.object(agentry, "run_tool_command") as run:
+            unresolved, rows = agentry.act_on_plugins_install(
+                args, manifest, manifest["plugins"], interactive=False,
+                action_width=15, state=snapshot
+            )
+        run.assert_not_called()
+        self.assertEqual(unresolved, 1 + len(manifest["plugins"]))
+        text = "\n".join(agentry._strip_color(r) for r in rows)
+        self.assertIn("declined", text)
+        self.assertIn("marketplace not ready", text)
+
     def test_act_on_plugins_install_failed_command_increments_unresolved(self):
         args = _make_namespace(tool="trae", yes=True, dry_run=False)
         manifest = self.repo.manifest_dict
@@ -1282,6 +1413,25 @@ class PluginOrchestrationTests(unittest.TestCase):
         self.assertGreater(unresolved, 0)
         text = "\n".join(agentry._strip_color(r) for r in rows)
         self.assertIn("failed", text)
+
+    def test_act_on_plugins_install_skips_already_installed_without_force(self):
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = self.repo.manifest_dict
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {"a": "marketplace"},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        with mock.patch.object(agentry, "run_tool_command") as run:
+            unresolved, rows = agentry.act_on_plugins_install(
+                args, manifest, [manifest["plugins"][0]], interactive=False,
+                action_width=15, state=snapshot
+            )
+        run.assert_not_called()
+        self.assertEqual(unresolved, 0)
+        self.assertEqual(rows, [])
 
     def test_act_on_plugins_uninstall_skips_absent_and_removes_present(self):
         args = _make_namespace(tool="trae", yes=True, dry_run=False)
@@ -1342,6 +1492,75 @@ class PluginOrchestrationTests(unittest.TestCase):
         text = "\n".join(agentry._strip_color(r) for r in rows)
         self.assertIn("kept", text)
         self.assertIn("marketplace", text)
+
+    def test_act_on_plugins_uninstall_declined_plugin_keeps_marketplace(self):
+        args = _make_namespace(tool="trae", yes=False, dry_run=False)
+        manifest = self.repo.manifest_dict
+        plugins = [manifest["plugins"][0]]
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {"a": "marketplace"},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        with mock.patch.object(agentry, "orchestrate_confirm", return_value=False), \
+                mock.patch.object(agentry, "run_tool_command") as run:
+            unresolved, rows = agentry.act_on_plugins_uninstall(
+                args, manifest, plugins, interactive=False,
+                action_width=15, state=snapshot
+            )
+        run.assert_not_called()
+        self.assertEqual(unresolved, 1)
+        text = "\n".join(agentry._strip_color(r) for r in rows)
+        self.assertIn("declined", text)
+        self.assertIn("Agentry plugin(s) still installed", text)
+
+    def test_act_on_plugins_uninstall_failed_plugin_keeps_marketplace(self):
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = self.repo.manifest_dict
+        plugins = [manifest["plugins"][0]]
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {"a": "marketplace"},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+
+        def fake_run(binary, cmd_args, dry_run, capture=False):
+            return False, "", "boom"
+
+        with mock.patch.object(agentry, "run_tool_command", side_effect=fake_run):
+            unresolved, rows = agentry.act_on_plugins_uninstall(
+                args, manifest, plugins, interactive=False,
+                action_width=15, state=snapshot
+            )
+        self.assertEqual(unresolved, 1)
+        text = "\n".join(agentry._strip_color(r) for r in rows)
+        self.assertIn("failed", text)
+        self.assertIn("boom", text)
+        self.assertIn("Agentry plugin(s) still installed", text)
+
+    def test_act_on_plugins_uninstall_keeps_marketplace_when_remaining_unknown(self):
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = self.repo.manifest_dict
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {"a": "marketplace"},
+            "mkt_ok": True,
+            "list_ok": False,
+        }
+
+        with mock.patch.object(agentry, "run_tool_command", return_value=(True, "", "")):
+            unresolved, rows = agentry.act_on_plugins_uninstall(
+                args, manifest, [manifest["plugins"][0]], interactive=False,
+                action_width=15, state=snapshot
+            )
+        self.assertEqual(unresolved, 1)
+        text = "\n".join(agentry._strip_color(r) for r in rows)
+        self.assertIn("could not verify remaining plugins", text)
 
 
 # ---------------------------------------------------------------------------
@@ -1418,6 +1637,10 @@ class GenerationRoundTripTests(unittest.TestCase):
     def test_build_skill_reference_rejects_traversing_rule_path(self):
         with self.assertRaises(SystemExit):
             agentry.build_skill_reference("../outside.md")
+
+    def test_write_or_check_rejects_output_outside_repo(self):
+        with self.assertRaises(SystemExit):
+            agentry.write_or_check(self.repo.root.parent / "outside.json", "{}", check=False, changed=[])
 
     def test_generate_skill_references_materializes_derived_files(self):
         manifest = self.repo.manifest_dict
@@ -1584,6 +1807,16 @@ class InstallUninstallTests(unittest.TestCase):
             agentry.cmd_install(args)
         self.assertFalse((self.project / ".trae").exists())
         self.assertFalse((self.project / "outside.md").exists())
+
+    def test_cmd_install_rejects_missing_source_file(self):
+        (self.repo.rules_dir / "code-quality" / "a.md").unlink()
+        args = _make_namespace(
+            tool="trae", plugin="a", component=["rules"],
+            project_dir=self.project, yes=True, dry_run=False,
+        )
+        with self.assertRaises(SystemExit):
+            agentry.cmd_install(args)
+        self.assertFalse((self.project / ".trae").exists())
 
     def test_cmd_uninstall_removes_components(self):
         args_install = _make_namespace(
