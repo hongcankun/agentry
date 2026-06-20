@@ -9,6 +9,8 @@ alwaysApply: true
 
 When adding or changing behavior, decide whether automated tests should be added or updated. Use the `test-engineering` skill for the detailed workflow.
 
+When delegating scoped test work, use the `test-engineer` agent. Its primary write scope is test code; it should edit production files only when the user or main agent explicitly includes production fixes in its delegated scope. Production edits must be minimal, directly tied to the tested behavior, and reported explicitly.
+
 ## When to test
 
 Add or update tests when a change:
@@ -39,3 +41,4 @@ If tests are not added for a risky change, state why.
 
 - `agentry-code-quality` plugin — the plugin this rule ships alongside.
 - `test-engineering` skill — the full test design, writing, debugging, and review procedure.
+- `test-engineer` agent — a subagent that writes, debugs, and reviews tests in an isolated context, following the `test-engineering` skill.
