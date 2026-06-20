@@ -1,0 +1,1 @@
+../../plugins/agentry-code-quality/commands/quality-gate.md
