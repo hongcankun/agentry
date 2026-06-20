@@ -47,6 +47,10 @@ Keep setup readable and local to the test unless a fixture removes real duplicat
 - Hide irrelevant defaults behind existing helpers.
 - Do not reuse mutable fixtures across tests unless the framework isolates them.
 
+## Structure test flow
+
+Structure tests so setup, behavior, and expectations are easy to distinguish. Use arrange-act-assert or the closest local equivalent when it fits the project style.
+
 ## Assert meaningful outcomes
 
 Assertions should prove the contract:
