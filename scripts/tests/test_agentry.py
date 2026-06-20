@@ -630,6 +630,14 @@ class ArgparseTests(unittest.TestCase):
         p_uninstall.add_argument("--yes", "-y", action="store_true")
         p_uninstall.add_argument("--source", choices=("marketplace", "checkout"))
 
+        p_inventory = sub.add_parser("inventory")
+        p_inventory.add_argument("--plugin")
+        p_inventory.add_argument("--component", action="append", choices=agentry.COMPONENT_CHOICES)
+        p_inventory.add_argument("--details", action="store_true")
+        p_inventory.add_argument("--paths", action="store_true")
+        p_inventory.add_argument("--json", action="store_true")
+        add_color_arg(p_inventory)
+
         p_gen = sub.add_parser("generate")
         p_gen.add_argument("target", nargs="?", choices=("claude", "trae", "all"), default="all")
         p_gen.add_argument("--check", action="store_true")
@@ -663,6 +671,17 @@ class ArgparseTests(unittest.TestCase):
     def test_component_all_parses(self):
         args = self._parser().parse_args(["install", "--tool", "claude", "--component", "all"])
         self.assertEqual(args.component, ["all"])
+
+    def test_inventory_parses_filters_and_output_flags(self):
+        args = self._parser().parse_args([
+            "inventory", "--plugin", "a", "--component", "skills", "--details", "--paths", "--json",
+        ])
+        self.assertEqual(args.command, "inventory")
+        self.assertEqual(args.plugin, "a")
+        self.assertEqual(args.component, ["skills"])
+        self.assertTrue(args.details)
+        self.assertTrue(args.paths)
+        self.assertTrue(args.json)
 
 
 # ---------------------------------------------------------------------------
@@ -1084,6 +1103,91 @@ class ReportRenderingTests(unittest.TestCase):
         # Plugin "a" declares rule code-quality/a.md, so the plan must include it.
         rels = [str(rel) for _, _, _, rel, _ in plan]
         self.assertTrue(any("a.md" in r for r in rels))
+
+
+# ---------------------------------------------------------------------------
+# Inventory command
+# ---------------------------------------------------------------------------
+
+
+class InventoryTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = _FakeRepo(Path(self._tmp.name))
+        for p in self.repo.patches():
+            p.start()
+        agentry.init_colors(False)
+
+    def tearDown(self):
+        for p in self.repo.patches():
+            p.stop()
+        agentry.init_colors(False)
+        self._tmp.cleanup()
+
+    def test_component_selection_defaults_to_all(self):
+        self.assertEqual(agentry.component_selection(None), set(agentry.COMPONENTS))
+
+    def test_component_selection_expands_all(self):
+        self.assertEqual(agentry.component_selection(["skills", "all"]), set(agentry.COMPONENTS))
+
+    def test_build_inventory_counts_selected_components(self):
+        manifest = self.repo.manifest_dict
+        plugins = agentry.select_plugins(manifest["plugins"], None)
+        report = agentry.build_inventory(manifest, plugins, {"skills", "rules"}, include_paths=False)
+        self.assertEqual(report["totals"]["plugins"], 2)
+        self.assertEqual(report["totals"]["components"]["skills"], 2)
+        self.assertEqual(report["totals"]["components"]["rules"], 3)
+        self.assertEqual(report["totals"]["components"]["agents"], 0)
+        self.assertEqual(report["totals"]["componentEntries"], 5)
+
+    def test_build_inventory_includes_paths(self):
+        plugin = self.repo.manifest_dict["plugins"][0]
+        report = agentry.build_inventory(
+            self.repo.manifest_dict, [plugin], {"skills", "commands", "rules"}, include_paths=True,
+        )
+        components = report["plugins"][0]["components"]
+        self.assertEqual(components["skills"][0]["path"], "plugins/a/skills/skill-one")
+        self.assertEqual(components["commands"][0]["path"], "plugins/a/commands/command-one.md")
+        self.assertEqual(components["rules"][0]["path"], "rules/code-quality/a.md")
+
+    def test_inventory_count_cell_dims_zero_when_color_enabled(self):
+        agentry.init_colors(True)
+        self.assertEqual(agentry.inventory_count_cell(0, 2), "\033[2m 0\033[0m")
+        self.assertEqual(agentry.inventory_count_cell(3, 2), " 3")
+
+    def test_cmd_inventory_prints_summary_table_by_default(self):
+        ns = _make_namespace(plugin=None, component=None, color="never", paths=False, details=False, json=False)
+        with mock.patch("builtins.print") as pr:
+            rv = agentry.cmd_inventory(ns)
+        self.assertEqual(rv, 0)
+        joined = "\n".join(str(c.args[0]) if c.args else "" for c in pr.call_args_list)
+        self.assertIn("Inventory: test-agentry 0.1.0", joined)
+        self.assertIn("plugin", joined)
+        self.assertIn("version", joined)
+        self.assertIn("skills", joined)
+        self.assertIn("a", joined)
+        self.assertIn("b", joined)
+        self.assertNotIn("plugin a", joined)
+        self.assertNotIn("skill-one", joined)
+
+    def test_cmd_inventory_details_prints_component_membership(self):
+        ns = _make_namespace(plugin="a", component=["skills"], color="never", paths=False, details=True, json=False)
+        with mock.patch("builtins.print") as pr:
+            rv = agentry.cmd_inventory(ns)
+        self.assertEqual(rv, 0)
+        joined = "\n".join(str(c.args[0]) if c.args else "" for c in pr.call_args_list)
+        self.assertIn("skills: 1 (skill-one)", joined)
+        self.assertNotIn("agent-one", joined)
+
+    def test_cmd_inventory_prints_json_report(self):
+        ns = _make_namespace(plugin="a", component=["skills"], color="never", paths=True, details=False, json=True)
+        with mock.patch("builtins.print") as pr:
+            rv = agentry.cmd_inventory(ns)
+        self.assertEqual(rv, 0)
+        data = json.loads(pr.call_args.args[0])
+        self.assertEqual(data["plugins"][0]["name"], "a")
+        self.assertEqual(data["totals"]["components"]["skills"], 1)
+        self.assertEqual(data["plugins"][0]["components"]["skills"][0]["path"], "plugins/a/skills/skill-one")
 
 
 # ---------------------------------------------------------------------------
