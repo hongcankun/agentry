@@ -88,6 +88,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **review-code** command: Review local changes, a branch, commit range, pull request, merge request, diff, or file for code-quality issues.
 - **improve-tests** command: Add, update, debug, review, or plan automated tests using the `test-engineering` skill.
 - **code-reviewer** agent: Reviews code changes for correctness, security, readability, performance, and maintainability, then returns prioritized, actionable feedback. Use proactively after writing or modifying code, or when reviewing a diff, pull request, merge request, commit, branch, or file.
+- **test-engineer** agent: Writes, updates, debugs, and reviews automated tests using the `test-engineering` skill. Use proactively for test coverage, failing or flaky tests, test-quality review, and code changes that need meaningful test coverage.
 - **code-quality/code-review** rule: Policy for when code review is required, the gates a change must pass before merging, and approval criteria; defers the review procedure to the `code-review` skill.
 - **code-quality/code-style** rule: Code style conventions covering core principles, formatting, naming, structure, language idioms, error handling, and comments that code should follow.
 - **code-quality/testing** rule: Testing policy for adding or changing behavior, including meaningful coverage, determinism, and parallel safety.
