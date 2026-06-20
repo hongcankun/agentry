@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Agentry maintenance CLI: install, status, uninstall, and generate.
+"""Agentry maintenance CLI: install, status, uninstall, inventory, and generate.
 
 Reads the canonical manifest (``agentry.json``) — the tool-agnostic source of
-truth — and either installs a plugin's components into an AI coding tool's
-directories or regenerates the per-tool packaging derived from the manifest.
+truth — and installs components, reports manifest/install state, or regenerates
+the per-tool packaging derived from the manifest.
 
 Subcommands:
 
 - ``install``   — copy or symlink a plugin's components into a tool's dirs.
 - ``status``    — report each item's install state without writing; exit 1 on drift.
 - ``uninstall`` — remove components this tool installed (owned copies/links).
+- ``inventory`` — report manifest plugins, versions, and component membership.
 - ``generate``  — regenerate Claude Code and/or Trae packaging from the manifest.
 
 Delivery channels. Neither tool's plugin format has a "rules" component, so
@@ -52,6 +53,10 @@ Examples:
     # Report-only check (exit 1 on drift), and global removal
     python3 scripts/agentry.py status --tool claude --global
     python3 scripts/agentry.py uninstall --tool trae --global --plugin agentry-code-quality
+
+    # Inventory the canonical manifest contents
+    python3 scripts/agentry.py inventory
+    python3 scripts/agentry.py inventory --plugin agentry-code-quality --component skills --paths
 
     # Regenerate packaging (or verify it in CI)
     python3 scripts/agentry.py generate
@@ -297,6 +302,13 @@ def plan_copies(plugins, components):
     return jobs
 
 
+def component_selection(component_args):
+    """Expand optional --component values into the component set to report."""
+    if component_args and "all" in component_args:
+        return set(COMPONENTS)
+    return set(component_args) if component_args else set(COMPONENTS)
+
+
 def dirs_equal(a, b):
     """Recursively compare two directory trees by content (skills are dirs)."""
     # ignore=[] overrides filecmp.DEFAULT_IGNORES (which hides .git, CVS, etc.)
@@ -465,6 +477,159 @@ def print_grouped_report(plan, label_width):
         print(colorize(f"{indent()}{COMPONENT_TITLE[component]}", "cyan"))
         for _, _, _, rel, state in rows:
             print(report_line(state, rel, label_width))
+
+
+# ---- inventory --------------------------------------------------------------
+
+def inventory_entries(plugin, components, include_paths=False):
+    """Return manifest component entries for one plugin."""
+    entries = {component: [] for component in COMPONENTS}
+    for component in COMPONENTS:
+        if component not in components:
+            continue
+        for name in plugin.get(component, []):
+            item = {"name": name}
+            if include_paths:
+                item["path"] = inventory_component_path(plugin, component, name)
+            entries[component].append(item)
+    return entries
+
+
+def inventory_component_path(plugin, component, name):
+    """Return the canonical source path for a manifest component entry."""
+    plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
+    if component == "skills":
+        item_name = validate_path_fragment(name, "skill name", allow_nested=False)
+        return str(Path("plugins") / plugin_name / "skills" / item_name)
+    if component == "agents":
+        item_name = validate_path_fragment(name, "agent name", allow_nested=False)
+        return str(Path("plugins") / plugin_name / "agents" / f"{item_name}.md")
+    if component == "commands":
+        item_name = validate_path_fragment(name, "command name", allow_nested=False)
+        return str(Path("plugins") / plugin_name / "commands" / f"{item_name}.md")
+    if component == "rules":
+        return str(Path("rules") / validate_path_fragment(name, "rule path", allow_nested=True))
+    sys.exit(f"error: unknown component: {component}")
+
+
+def build_inventory(manifest, plugins, components, include_paths=False):
+    """Build a structured, read-only report from the canonical manifest."""
+    report_plugins = []
+    totals = {component: 0 for component in COMPONENTS}
+    for plugin in plugins:
+        component_items = inventory_entries(plugin, components, include_paths)
+        for component, items in component_items.items():
+            totals[component] += len(items)
+        report_plugins.append(
+            {
+                "name": plugin.get("name", ""),
+                "version": plugin.get("version", ""),
+                "description": plugin.get("description", ""),
+                "components": component_items,
+            }
+        )
+    return {
+        "name": manifest.get("name", ""),
+        "version": manifest.get("version", ""),
+        "repository": manifest.get("repository", ""),
+        "plugins": report_plugins,
+        "totals": {
+            "plugins": len(report_plugins),
+            "components": totals,
+            "componentEntries": sum(totals.values()),
+        },
+    }
+
+
+def inventory_count_cell(count, width):
+    """Right-align an inventory count and dim zeroes."""
+    text = f"{count:>{width}}"
+    return colorize(text, "dim") if count == 0 else text
+
+
+def print_inventory_summary(report, components):
+    """Render a compact table for scanning plugin component counts."""
+    totals = report["totals"]
+    component_summary = ", ".join(
+        f"{component}: {totals['components'][component]}" for component in COMPONENTS if component in components
+    )
+    title = report["name"] or "Agentry"
+    version = f" {report['version']}" if report.get("version") else ""
+    print(colorize(f"Inventory: {title}{version}", "cyan"))
+    print(f"{indent()}plugins: {totals['plugins']}")
+    print(f"{indent()}components: {totals['componentEntries']} ({component_summary})")
+    if report.get("repository"):
+        print(colorize(f"{indent()}repository: {report['repository']}", "dim"))
+
+    columns = [("plugin", "name"), ("version", "version")]
+    columns.extend((component, component) for component in COMPONENTS if component in components)
+    widths = {}
+    for label, key in columns:
+        if key in COMPONENTS:
+            values = [str(len(plugin["components"][key])) for plugin in report["plugins"]]
+        else:
+            values = [plugin.get(key, "") for plugin in report["plugins"]]
+        widths[key] = max(len(label), *(len(value) for value in values)) if values else len(label)
+
+    print()
+    header = "  ".join(f"{label:<{widths[key]}}" for label, key in columns)
+    print(colorize(f"{indent()}{header}", "dim"))
+    for plugin in report["plugins"]:
+        cells = []
+        for _label, key in columns:
+            if key in COMPONENTS:
+                cells.append(inventory_count_cell(len(plugin["components"][key]), widths[key]))
+            else:
+                cells.append(f"{plugin.get(key, ''):<{widths[key]}}")
+        print(f"{indent()}{'  '.join(cells)}")
+
+
+def print_inventory_details(report, components, include_paths=False):
+    """Render expanded component membership for narrowed or detailed reports."""
+    for plugin in report["plugins"]:
+        print()
+        version = f" {plugin['version']}" if plugin.get("version") else ""
+        print(colorize(f"{indent()}{plugin['name']}{version}", "cyan"))
+        if plugin.get("description"):
+            print(colorize(f"{indent()}  {plugin['description']}", "dim"))
+        for component in COMPONENTS:
+            if component not in components:
+                continue
+            items = plugin["components"][component]
+            label = COMPONENT_TITLE[component].lower()
+            if not items:
+                print(f"{indent()}  {colorize(label, 'cyan')}: {colorize('0', 'dim')}")
+                continue
+            if include_paths:
+                print(f"{indent()}  {colorize(label, 'cyan')}: {len(items)}")
+                for item in items:
+                    print(f"{indent()}    {item['name']} -> {colorize(item['path'], 'dim')}")
+            else:
+                names = ", ".join(item["name"] for item in items)
+                print(f"{indent()}  {colorize(label, 'cyan')}: {len(items)} ({names})")
+
+
+def print_inventory(report, components, include_paths=False, details=False):
+    """Render the human-readable component inventory."""
+    if details or include_paths:
+        print_inventory_summary(report, components)
+        print_inventory_details(report, components, include_paths=include_paths)
+    else:
+        print_inventory_summary(report, components)
+
+
+def cmd_inventory(args):
+    """inventory: report manifest plugins, versions, and component membership."""
+    resolve_colors(args.color)
+    manifest = load_manifest()
+    plugins = select_plugins(manifest.get("plugins", []), args.plugin)
+    components = component_selection(args.component)
+    report = build_inventory(manifest, plugins, components, include_paths=args.paths)
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print_inventory(report, components, include_paths=args.paths, details=args.details)
+    return 0
 
 
 def confirm(question, default):
@@ -1864,6 +2029,21 @@ def main():
         "--component, else checkout; passing --component selects checkout.",
     )
     p_uninstall.set_defaults(func=cmd_uninstall, status=False, symlink=False)
+
+    inventory_help = "Report manifest plugins, versions, and component membership."
+    p_inventory = sub.add_parser("inventory", help=inventory_help, description=inventory_help)
+    p_inventory.add_argument("--plugin", help="Report only this plugin (default: all plugins).")
+    p_inventory.add_argument(
+        "--component",
+        action="append",
+        choices=COMPONENT_CHOICES,
+        help="Component types to report (repeatable; use 'all' for every component).",
+    )
+    p_inventory.add_argument("--details", action="store_true", help="Include component names below the summary table.")
+    p_inventory.add_argument("--paths", action="store_true", help="Include canonical source paths.")
+    p_inventory.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    add_color_arg(p_inventory)
+    p_inventory.set_defaults(func=cmd_inventory)
 
     generate_help = "Regenerate per-tool packaging from agentry.json."
     p_generate = sub.add_parser("generate", help=generate_help, description=generate_help)

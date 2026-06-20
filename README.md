@@ -64,10 +64,11 @@ A bare `install` run is **interactive**: it reports each item's state (missing /
 
 Non-interactive (CI, piped) behavior is conservative: install installs missing files and skips stale ones; uninstall removes owned files only. Both skip the marketplace/plugin phase unless `--yes` is given. Use `--dry-run` to preview either channel without writing anything.
 
-Two companion subcommands round out the lifecycle:
+Additional subcommands round out the lifecycle:
 
 - `status` — report-only; writes nothing. Exits 1 if any file is missing or stale (handy for CI). Also reports marketplace and per-plugin install state read-only (at any scope — plugins are user-scoped), which is informational and never affects the exit code.
 - `uninstall` — remove components this repo installed (owned copies or symlinks). Keeps items that have drifted from the source unless `--force` is passed. On the marketplace channel it uninstalls the plugin via the tool CLI and removes the marketplace only when no Agentry plugin remains (to keep it otherwise, or force-remove it, use the tool's own CLI).
+- `inventory` — read-only manifest report for plugin versions and component membership. Use `--plugin`, repeated `--component`, `--details`, `--paths`, or `--json` to narrow or script the output.
 
 Add `--symlink` to link components back to the checkout instead of copying, so they track the source with no drift (the link is relative; not portable to Windows checkouts):
 
@@ -132,7 +133,7 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow — edi
 - [`agentry.json`](./agentry.json) — canonical, tool-agnostic manifest. **Edit this**, then regenerate derived files.
 - [`plugins/`](./plugins) — each plugin's skills (`skills/<name>/SKILL.md`), subagents (`agents/<name>.md`), and commands (`commands/<name>.md`).
 - [`rules/`](./rules) — tool-agnostic rules, organized by topic; associated with plugins via the manifest.
-- [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` a plugin's components into a tool's directories, and `generate` per-tool packaging from the manifest.
+- [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` a plugin's components into a tool's directories, report the manifest with `inventory`, and `generate` per-tool packaging from the manifest.
 - [`scripts/tests/`](./scripts/tests) — stdlib-only (`unittest`) tests for `scripts/agentry.py`.
 
 ### Generated files
