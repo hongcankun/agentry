@@ -6,6 +6,10 @@
 
 <!-- Bullet the added/changed/removed skills, subagents, rules, or plugins. -->
 
+## Notes
+
+<!-- Optional: call out validation caveats, design decisions, runtime checks, known limitations, or follow-up work. Write N/A if there are no notes. -->
+
 ## Checklist
 
 - [ ] Edited the canonical `agentry.json` (not generated packaging)
