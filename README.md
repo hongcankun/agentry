@@ -86,6 +86,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 
 - **code-review** skill: Review code changes for correctness, readability, security, performance, and maintainability, then deliver prioritized, actionable feedback. Use when a user asks to review a diff, pull request, commit, branch, or file, or wants feedback on code they wrote or modified.
 - **test-engineering** skill: Write, update, debug, and review automated test code by identifying behavior to cover, matching the project's test framework and style, adding focused assertions or fixtures, and validating the result. Use when the user asks to add tests, improve coverage, fix failing tests, review test code, or design a testing plan.
+- **review-publishing** skill: Draft and publish existing review findings to PRs, MRs, or code review surfaces by mapping findings to inline or summary comments, deduplicating noise, and requiring explicit approval for remote mutations. Use when the user asks to publish, post, draft, or prepare review comments from existing findings.
 - **review-code** command: Review local changes, a branch, commit range, pull request, merge request, diff, or file for code-quality issues.
 - **improve-tests** command: Add, update, debug, review, or plan automated tests using the `test-engineering` skill.
 - **quality-gate** command: Run a combined pre-merge gate covering code quality, security risk, and test adequacy.
