@@ -13,12 +13,12 @@
     {
       "name": "agentry-code-quality",
       "description": "Code review and test-engineering skills, slash commands, and specialist subagents that catch correctness, security, maintainability, and test-quality issues with actionable guidance.",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "category": "code-quality",
       "keywords": ["code-review", "testing", "test-engineering", "coverage", "security", "subagent", "code-style"],
       "skills": ["code-review", "test-engineering"],
       "agents": ["code-reviewer", "test-engineer"],
-      "commands": ["review-code", "improve-tests", "quality-gate"],
+      "commands": ["review-code", "improve-tests", "quality-gate", "publish-review"],
       "rules": ["code-quality/code-review.md", "code-quality/code-style.md", "code-quality/testing.md"],
       "skillReferences": { "code-review": ["code-quality/code-style.md"] }
     },
