@@ -60,7 +60,7 @@ Convert only actionable, concrete findings into publishable comments:
 
 Deduplicate against existing comments when the platform exposes them. Prefer updating or skipping equivalent prior comments over posting duplicates.
 
-Before drafting or publishing comment bodies, follow `references/comment-format.md`. Keep inline comments location-focused, keep summary comments non-duplicative, and keep platform actions, published URLs, comment ids, review ids, and publish status in the agent report rather than in the published comment body.
+Before drafting comment bodies, read `references/comment-format.md`; before presenting or publishing them, check the draft against that format. Keep inline comments location-focused, keep summary comments non-duplicative, and keep platform actions, published URLs, comment ids, review ids, and publish status in the agent report rather than in the published comment body.
 
 ### 4. Decide publication mode
 

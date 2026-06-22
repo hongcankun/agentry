@@ -59,3 +59,10 @@ Rules:
 - Omit `Notes` or `Remaining risk` when empty.
 - If the source has different coverage tracks, adapt the `Coverage` labels while keeping the same role: what was covered, skipped, or degraded.
 - Keep platform actions, published URLs, comment ids, review ids, and publish status out of summary comment bodies.
+
+## Final Check
+
+Before returning or publishing, confirm:
+- inline comments use the inline template and normalized levels;
+- summary comments use the summary template and do not repeat inline findings;
+- platform URLs, ids, and publish status stay in the agent report, not the comment body.
