@@ -57,6 +57,7 @@ Details and tooling: `references/conflict-resolution.md`.
 - Read repository state (`git status`, `git log`, current branch) before acting.
 - Treat destructive or shared-state operations (force-push, `reset --hard`, deleting branches, pushing) as needing explicit user confirmation.
 - Keep branches focused and short-lived; delete merged branches.
+- Name branches `type/short-description`, keeping the branch `type` consistent with the Conventional Commit type its commits carry (see `references/branching-strategies.md`).
 - Prefer fixing root causes over bypassing checks (avoid `--no-verify`).
 
 ## References
