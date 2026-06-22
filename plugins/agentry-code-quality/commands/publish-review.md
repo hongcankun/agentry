@@ -17,10 +17,10 @@ If the review target, findings source, publication mode, authorization, or desti
 
 ## Workflow
 
-1. Must follow the `review-publishing` skill as the authoritative procedure, including its published comment body format and output contract.
+1. Load and follow the `review-publishing` skill as the authoritative procedure, including its published comment body format and output contract; if unavailable, stop.
 2. Establish the review target and findings source from the command input, selected context, current repository, or previous conversation.
 3. Do not run a fresh broad review by default. If no concrete findings are available, stop and ask the user to provide findings or run a review/gate workflow first.
-4. Draft inline comments and/or a summary comment from existing findings using the published comment body format. Default to `draft only` unless the current instruction clearly approves publishing.
+4. Draft inline comments and/or a summary comment from existing findings using the `review-publishing` procedure and published comment body format. Default to `draft only` unless the current instruction clearly approves publishing.
 5. Present the publication plan and ask for explicit confirmation before any remote mutation unless explicit publish approval is already present in the current instruction.
 6. If approved, publish only the approved comments or review summary through the available platform tool/API. If tooling or auth is unavailable, return a ready-to-publish draft and state what blocked publication.
 
