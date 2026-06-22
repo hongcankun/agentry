@@ -40,14 +40,16 @@ Best for: scheduled, versioned releases; software shipped to customers in distin
 
 Use a `type/short-description` form with hyphenated lowercase descriptions:
 
-- `feature/user-login`
+- `feat/user-login`
 - `fix/null-pointer-on-logout`
 - `docs/api-readme`
 - `refactor/payment-service`
 - `release/1.4.0`
 - `hotfix/1.4.1`
 
-Optionally prefix with an issue id: `feature/123-user-login`.
+Optionally prefix with an issue id: `feat/123-user-login`.
+
+For feature and fix work, keep the branch `type` consistent with the Conventional Commit `type` the branch's commits will carry (`feat`, `fix`, `docs`, `refactor`, …), so the branch name and its commits agree. `release/*` and `hotfix/*` are GitFlow branch types with no commit-type equivalent and are exempt from this alignment.
 
 ## Branch hygiene
 

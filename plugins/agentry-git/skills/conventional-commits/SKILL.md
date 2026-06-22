@@ -14,6 +14,14 @@ Use this skill when the task is to:
 - rewrite an existing commit's message to follow conventional commits;
 - validate if a commit message follows conventional commits.
 
+## Commit scope
+
+Keep each commit focused on a single logical change. A commit should do one thing, so its `type` and `description` describe it without ambiguity:
+
+- If the staged changes span unrelated concerns (e.g. a bug fix plus an unrelated refactor), split them into separate commits rather than forcing one type onto a mixed change.
+- A change that genuinely belongs together — code plus its tests, or a rename touching many files — is one logical change and stays in one commit.
+- When you cannot pick a single accurate `type`, that is a signal the commit is doing too much; split it.
+
 ## Commit message structure
 
 A Conventional Commit message has the following structure:
@@ -56,12 +64,13 @@ Additional meta-information, e.g., breaking changes, issue references.
 
 ## Workflow
 
-1. Analyze the changes being committed to determine the appropriate `type`.
-2. Determine if a `scope` is appropriate (optional).
-3. Write a clear, concise `description`.
-4. Add a `body` if more context is needed (optional).
-5. Add `footer(s)` if applicable (optional).
-6. Validate the commit message (use `scripts/validate_commit_message.py` if needed).
+1. Confirm the staged changes form a single logical change (see Commit scope); if not, split them first.
+2. Analyze the changes being committed to determine the appropriate `type`.
+3. Determine if a `scope` is appropriate (optional).
+4. Write a clear, concise `description`.
+5. Add a `body` if more context is needed (optional).
+6. Add `footer(s)` if applicable (optional).
+7. Validate the commit message (use `scripts/validate_commit_message.py` if needed).
 
 ## References
 
