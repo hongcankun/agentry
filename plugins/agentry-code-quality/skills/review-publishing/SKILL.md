@@ -62,6 +62,8 @@ Deduplicate against existing comments when the platform exposes them. Prefer upd
 
 Before drafting comment bodies, read `references/comment-format.md`; before presenting or publishing them, check the draft against that format. Keep inline comments location-focused, keep summary comments non-duplicative, and keep platform actions, published URLs, comment ids, review ids, and publish status in the agent report rather than in the published comment body.
 
+Published inline comments must use `Problem [Level]`, `Impact`, optional `Notes`, `Suggested fix`, and `_Source: ..._`. Published summary comments must use `Verdict`, `Change summary`, `Findings`, `Coverage`, `Validation`, optional `Notes`, optional `Remaining risk`, and `_Source: ..._`.
+
 ### 4. Decide publication mode
 
 Default to `draft only` unless the current instruction clearly approves publishing. In draft mode, return the exact comments and summary without calling remote mutation APIs.
@@ -76,6 +78,7 @@ Before publishing, present the exact publication plan:
 - summary comment body;
 - any findings omitted and why;
 - whether the plan will be drafted only or published;
+- whether drafted comment bodies were checked against the published comment format;
 - the platform command or API action that will be used if publishing is approved.
 
 If explicit approval is already present, publish the prepared comments or review summary without asking for another confirmation. Otherwise, ask for explicit confirmation before any remote mutation.
