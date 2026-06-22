@@ -8,8 +8,11 @@ Use inline comments for actionable findings that map confidently to a changed lo
 
 ```markdown
 **Problem [Level]:** <concrete issue tied to this location>
+
 **Impact:** <why it matters>
+
 **Notes:** <optional evidence, constraint, affected scenario, recurrence, shortened log, or platform caveat>
+
 **Suggested fix:** <specific change, remediation, or test/assertion to add>
 
 _Source: <review workflow or finding source>[ / <source track>]._
