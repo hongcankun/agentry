@@ -38,6 +38,13 @@ remains (to keep or force-remove it otherwise, use the tool's own CLI).
 ``status`` reports the marketplace and per-plugin install state read-only, at any
 scope (plugins are user-scoped).
 
+Downstream reuse. This module is the reusable engine: a downstream catalog
+vendors it (e.g. via git submodule) and calls ``main(repo_root=..., manifest_name=...,
+prog=..., brand=...)`` so every command, its generated provenance text, and its
+help/header read that catalog's own root, manifest, program name, and brand. The
+examples below show Agentry's own invocation (the defaults); a downstream wrapper
+substitutes its program name (e.g. ``scripts/downstream.py``) and manifest.
+
 Examples:
     # Global install: add the marketplace + install the plugin, then copy rules
     python3 scripts/agentry.py install --tool claude --global --plugin agentry-code-quality
@@ -80,6 +87,14 @@ from pathlib import Path
 # Agentry's own content.
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST_NAME = "agentry.json"
+# Program name shown in help/usage and woven into generated provenance text. A
+# downstream wrapper passes its own (e.g. "downstream.py") via main(prog=...); the
+# default reproduces `scripts/agentry.py` output byte-for-byte.
+DEFAULT_PROG = "agentry.py"
+# Display name shown in the CLI help banner and the install/status/uninstall run
+# header. A downstream wrapper passes its own (e.g. "Downstream") via main(brand=...);
+# the default reproduces Agentry's own help/header text exactly.
+DEFAULT_BRAND = "Agentry"
 
 # Resolved repo location and derived paths. These module globals are the runtime
 # config every command reads; configure() recomputes them from a repo root and
@@ -90,27 +105,57 @@ REPO_ROOT = DEFAULT_REPO_ROOT
 MANIFEST = REPO_ROOT / DEFAULT_MANIFEST_NAME
 PLUGINS_DIR = REPO_ROOT / "plugins"
 RULES_DIR = REPO_ROOT / "rules"
+# Program name woven into generated provenance text; see DEFAULT_PROG. Set by
+# configure() so generated artifacts name the active wrapper, not this module.
+PROG = DEFAULT_PROG
+# Display name shown in CLI help/header text; see DEFAULT_BRAND. Set by
+# configure() so a downstream catalog's interactive output reads its own name.
+BRAND = DEFAULT_BRAND
 
 CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
 
 
-def configure(repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME):
+def configure(repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog=DEFAULT_PROG, brand=DEFAULT_BRAND):
     """Point the CLI at a repo root and manifest, recomputing derived paths.
 
     ``repo_root=None`` selects Agentry's own checkout (``DEFAULT_REPO_ROOT``),
     preserving the original behavior exactly. A downstream wrapper passes its own
     root and manifest filename so install/uninstall/generate/status/inventory all
     operate against that tree instead of the (submodule) location of this file.
+    ``prog`` is the program name woven into generated provenance text, and
+    ``brand`` is the display name shown in CLI help/header text, so those name the
+    active wrapper rather than this module.
     """
-    global REPO_ROOT, MANIFEST, PLUGINS_DIR, RULES_DIR
+    global REPO_ROOT, MANIFEST, PLUGINS_DIR, RULES_DIR, PROG, BRAND
     global CLAUDE_MARKETPLACE, TRAE_MARKETPLACE
     REPO_ROOT = (DEFAULT_REPO_ROOT if repo_root is None else Path(repo_root)).resolve()
     MANIFEST = REPO_ROOT / manifest_name
     PLUGINS_DIR = REPO_ROOT / "plugins"
     RULES_DIR = REPO_ROOT / "rules"
+    PROG = prog
+    BRAND = brand
     CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
     TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
+
+
+def cli_name():
+    """Return the path-form CLI name used in generated provenance text.
+
+    ``PROG`` is the bare program name (``agentry.py``); generated artifacts and
+    the ``generate --check`` hint refer to it by its in-repo path, so a
+    downstream wrapper named ``downstream.py`` yields ``scripts/downstream.py``.
+    """
+    return f"scripts/{PROG}"
+
+
+def manifest_label():
+    """Return the active manifest filename (e.g. ``agentry.json``).
+
+    Derived from the resolved ``MANIFEST`` path so generated provenance text and
+    error messages name the manifest a downstream wrapper actually loaded.
+    """
+    return MANIFEST.name
 
 
 COMPONENTS = ("skills", "agents", "commands", "rules")
@@ -585,7 +630,7 @@ def print_inventory_summary(report, components):
     component_summary = ", ".join(
         f"{component}: {totals['components'][component]}" for component in COMPONENTS if component in components
     )
-    title = report["name"] or "Agentry"
+    title = report["name"] or BRAND
     version = f" {report['version']}" if report.get("version") else ""
     print(colorize(f"Inventory: {title}{version}", "cyan"))
     print(f"{indent()}plugins: {totals['plugins']}")
@@ -835,7 +880,7 @@ def derive_marketplace_source(manifest):
     name = manifest.get("name", "")
     if owner and name:
         return f"{owner}/{name}"
-    sys.exit("error: cannot derive marketplace source from agentry.json (need 'repository' or 'owner' + 'name')")
+    sys.exit(f"error: cannot derive marketplace source from {manifest_label()} (need 'repository' or 'owner' + 'name')")
 
 
 def marketplace_name(manifest):
@@ -1200,15 +1245,15 @@ def act_on_plugins_uninstall(args, manifest, plugins, interactive, action_width,
             unresolved += 1
             rows.append(plugin_row("failed", name, action_width, err.strip() or "unknown error"))
 
-    # Marketplace removal: only when no Agentry plugin remains.
+    # Marketplace removal: only when no plugin from this catalog remains.
     remaining_ok, remaining = list_ok, (installed - removed) & agentry_plugin_names(manifest)
     if not remaining_ok:
         unresolved += 1
         rows.append(plugin_row("kept", f"marketplace {mkt}", action_width, "could not verify remaining plugins"))
     elif remaining:
         rows.append(plugin_row("kept", f"marketplace {mkt}", action_width,
-                               f"{len(remaining)} Agentry plugin(s) still installed"))
-    elif orchestrate_confirm(f"{indent()}no Agentry plugins remain; remove marketplace '{mkt}'?", args, interactive, bulk=bulk):
+                               f"{len(remaining)} {BRAND} plugin(s) still installed"))
+    elif orchestrate_confirm(f"{indent()}no {BRAND} plugins remain; remove marketplace '{mkt}'?", args, interactive, bulk=bulk):
         ok, _, err = run_tool_command(
             binary,
             ["plugin", "marketplace", "remove", mkt] + removal_confirm_flags(args.tool),
@@ -1216,7 +1261,7 @@ def act_on_plugins_uninstall(args, manifest, plugins, interactive, action_width,
         )
         if ok:
             label = "would remove" if args.dry_run else "removed"
-            rows.append(plugin_row(label, f"marketplace {mkt}", action_width, "no Agentry plugins remain"))
+            rows.append(plugin_row(label, f"marketplace {mkt}", action_width, f"no {BRAND} plugins remain"))
         else:
             unresolved += 1
             rows.append(plugin_row("failed", f"marketplace {mkt}", action_width, err.strip() or "unknown error"))
@@ -1378,7 +1423,7 @@ def selected_file_plan(args, base, components):
 
 def print_run_header(args, base, scope, components, action, channel=None):
     """Print the common title/detail block for install/status/uninstall."""
-    title = ("📦 " if _USE_EMOJI else "") + f"Agentry — {args.tool}, {scope} scope ({base})"
+    title = ("📦 " if _USE_EMOJI else "") + f"{BRAND} — {args.tool}, {scope} scope ({base})"
     print(colorize(title, "cyan"))
     detail = [f"plugin: {args.plugin or 'all'}", f"components: {', '.join(sorted(components))}"]
     if channel is not None:
@@ -1721,7 +1766,7 @@ def cmd_uninstall(args):
 # ---- generate ---------------------------------------------------------------
 
 def generated_note(tool):
-    return f"GENERATED from agentry.json by 'scripts/agentry.py generate {tool}'. Do not edit by hand."
+    return f"GENERATED from {manifest_label()} by '{cli_name()} generate {tool}'. Do not edit by hand."
 
 
 def serialize(data):
@@ -1883,7 +1928,7 @@ def build_skill_reference(rule_rel):
     if not src.exists():
         sys.exit(f"error: skillReferences rule not found: {src}")
     note = (
-        f"<!-- GENERATED from rules/{rule_path} by 'scripts/agentry.py generate'. "
+        f"<!-- GENERATED from rules/{rule_path} by '{cli_name()} generate'. "
         "Do not edit by hand; edit the canonical rule. -->\n\n"
     )
     body = strip_excluded_blocks(strip_frontmatter(src.read_text(encoding="utf-8")))
@@ -1928,7 +1973,7 @@ def cmd_generate(args):
     label = " + ".join(targets) if args.target == "all" else args.target
     if args.check:
         if changed:
-            print("Out of date (run 'scripts/agentry.py generate'):")
+            print(f"Out of date (run '{cli_name()} generate'):")
             for path in changed:
                 print(f"  {path}")
             return 1
@@ -1999,25 +2044,26 @@ class _SubcommandHelpFormatter(argparse.HelpFormatter):
         return parts
 
 
-def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog="agentry.py"):
+def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog=DEFAULT_PROG, brand=DEFAULT_BRAND):
     """Run the CLI against ``repo_root``/``manifest_name`` (Agentry's own by default).
 
-    Keyword-only ``repo_root``/``manifest_name``/``prog`` are the reusable seam: a
-    downstream catalog reusing this module via git submodule calls
-    ``main(repo_root=<its root>, manifest_name=<its manifest>, prog=<its name>)``
-    so every command operates on its tree and its help reads its own program
-    name. The defaults reproduce ``scripts/agentry.py`` behavior byte-for-byte.
-    ``argv`` defaults to ``sys.argv[1:]``.
+    Keyword-only ``repo_root``/``manifest_name``/``prog``/``brand`` are the
+    reusable seam: a downstream catalog reusing this module via git submodule
+    calls ``main(repo_root=<its root>, manifest_name=<its manifest>,
+    prog=<its name>, brand=<its display name>)`` so every command operates on its
+    tree and its help/header read its own program and display names. The defaults
+    reproduce ``scripts/agentry.py`` behavior byte-for-byte. ``argv`` defaults to
+    ``sys.argv[1:]``.
     """
     # Configure from this call's arguments on every invocation, so the result
     # never depends on a previous in-process call: a plain main() resets to
     # Agentry's own checkout, and an injected one targets the given tree. (Tests
     # that drive cmd_* directly still patch the globals; they do not go through
     # main().)
-    configure(repo_root, manifest_name)
+    configure(repo_root, manifest_name, prog, brand)
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="Agentry maintenance CLI.",
+        description=f"{BRAND} maintenance CLI.",
         formatter_class=_SubcommandHelpFormatter,
     )
     sub = parser.add_subparsers(dest="command", title="commands", metavar="<command>")
@@ -2070,7 +2116,7 @@ def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog
         choices=("marketplace", "checkout"),
         default=None,
         help="Delivery channel to undo (rules are removed either way). 'marketplace' uninstalls "
-        "plugins via the tool CLI and removes the marketplace once no Agentry plugin remains; it "
+        f"plugins via the tool CLI and removes the marketplace once no {BRAND} plugin remains; it "
         "is user-scoped, so it forces --global and cannot be combined with --component. 'checkout' "
         "removes only checkout-copied files. Default: marketplace for a --global run with no "
         "--component, else checkout; passing --component selects checkout.",
@@ -2092,7 +2138,7 @@ def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog
     add_color_arg(p_inventory)
     p_inventory.set_defaults(func=cmd_inventory)
 
-    generate_help = "Regenerate per-tool packaging from agentry.json."
+    generate_help = f"Regenerate per-tool packaging from {manifest_label()}."
     p_generate = sub.add_parser("generate", help=generate_help, description=generate_help)
     p_generate.add_argument(
         "target", nargs="?", choices=("claude", "trae", "all"), default="all", metavar="<target>",
