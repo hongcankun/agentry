@@ -33,6 +33,8 @@ How the change was verified (tests run, manual steps).
 - [ ] No secrets or debug output committed
 ```
 
+Do not hard-wrap (auto-fold) body text: write each paragraph as a single line and let the host's Markdown renderer soft-wrap it. Hard line breaks mid-paragraph render badly on GitHub/GitLab. Use blank lines to separate paragraphs and explicit Markdown list items where structure is intended.
+
 ## Author checklist
 
 - Keep the PR small and focused on a single concern.
