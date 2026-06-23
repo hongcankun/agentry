@@ -18,7 +18,9 @@ When changing the extensions or plugin set, follow these steps in order:
 
 1. **Edit the content.** Add or modify skills/subagents/commands under `plugins/<plugin>/`, or rules under `rules/`. New skills must keep the standard layout (`skills/<name>/SKILL.md`, optional `references/`, `scripts/`, `assets/`); new commands live under `commands/<name>.md`.
 2. **Update `agentry.json`.** Reflect any added/removed/renamed component in the relevant plugin's `skills`/`agents`/`commands`/`rules` arrays (and its `skillReferences` map when embedding a rule's content into a skill), and its `description`/`keywords` if scope changed.
-3. **Bump the version.** Follow the Versioning policy in `README.md`: bump the changed plugin's `version` independently (SemVer — patch = fixes, minor = added component, major = removed/renamed/breaking). Bump the top-level `version` only for catalog-level changes (adding/removing a plugin).
+3. **Bump versions.** Follow the Versioning policy in `README.md`. Two levels:
+   - Bump the changed plugin's `version` independently (SemVer — patch = fixes, minor = added component, major = removed/renamed/breaking).
+   - Bump the top-level `version` (the **project release version**) to the **most-severe change** in the release — `max()` of every per-plugin bump and any catalog/CLI change, on the same SemVer scale: **patch** when the worst change is only a fix, **minor** when something is added (a plugin's new component, an added plugin, or a new `agentry.py` capability), **major** when something is removed/renamed/breaking (a per-plugin major, a removed/renamed plugin, or a breaking CLI change). Little extra judgment — it rolls up the per-plugin bumps you already chose alongside any catalog/CLI change. Changes with no observable surface (tests, no-op refactors, this `AGENTS.md`, CI) do not bump it.
 4. **Regenerate packaging.**
    ```bash
    python3 scripts/agentry.py generate
@@ -62,6 +64,7 @@ This repo follows a PR-based flow; apply it on top of the `git-workflow` and `co
 - Add a brief commit body when the subject alone does not explain the important context, such as why the change exists, what user-facing behavior it adds, or why generated/dogfooding files changed.
 - Write the PR body to match `.github/pull_request_template.md`; `gh pr create --body` bypasses the template, so include its sections yourself. Check (`[x]`) each item when satisfied, or when it does not apply append `— N/A: <reason>`; leave a box unchecked only for outstanding work.
 - After a PR merges, switch back to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs (`git fetch --prune`). The remote branch is auto-deleted on merge.
+- When a merged release bumped the top-level `version`, tag that commit on `main` with an annotated tag `vX.Y.Z` matching the new top-level `version` (`git tag -a vX.Y.Z -m "..."`). Creating the tag locally is reversible, but pushing it (`git push origin vX.Y.Z`) is a shared, remote action — ask for explicit confirmation first, same as pushing a branch.
 
 ## Conventions
 

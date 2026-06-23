@@ -158,15 +158,22 @@ Adding support for another tool means adding its targets to `scripts/agentry.py`
 
 ## Versioning
 
-Versions live in `agentry.json` and propagate to the generated packaging. Two levels:
+Versions live in `agentry.json` and propagate to the generated packaging. Two levels serve different audiences:
 
-- **Per-plugin `version`** (one per entry in `plugins`) — the meaningful, user-facing version. Both Claude Code and Trae use it to deliver updates: a plugin updates for users only when its version string changes (omit it and the tool falls back to the git commit SHA). Version each plugin **independently** — bump only the plugins whose content actually changed, so unrelated plugins don't show spurious updates.
-- **Top-level `version`** — an informational version for the marketplace catalog as a whole. It is emitted into Claude Code's `marketplace.json`; neither tool keys plugin updates off it. Bump it for catalog-level changes (adding/removing a plugin, or a coordinated release).
+- **Per-plugin `version`** (one per entry in `plugins`) — the **delivery** signal. Both Claude Code and Trae use it to push updates: a plugin updates for users only when its version string changes (omit it and the tool falls back to the git commit SHA). Version each plugin **independently** with [SemVer](https://semver.org) over that plugin's content, and bump only the plugins whose content actually changed so unrelated plugins don't show spurious updates:
+  - **patch** — wording fixes, clarifications, or non-behavioral edits to existing components.
+  - **minor** — add a new skill, subagent, command, or rule to the plugin, or a backward-compatible capability.
+  - **major** — remove or rename a component, or otherwise change behavior in a breaking way.
+- **Top-level `version`** — the **project release version**, and the value used for git release tags (`vX.Y.Z`). It applies SemVer to the repo's whole observable surface: the **plugin set** (what's installed) plus the **`agentry.py`** install/generate CLI that downstream consumers pin and run. It is also emitted into Claude Code's `marketplace.json`, but neither tool keys plugin updates off it, so it is purely a human/release/downstream-pin marker.
 
-Use [SemVer](https://semver.org) for a plugin's content:
+Bump the project release version to the **most-severe change** in the release — a rollup: the `max()` of every per-plugin bump and any catalog/CLI change, on the same SemVer scale:
 
-- **patch** — wording fixes, clarifications, or non-behavioral edits to existing components.
-- **minor** — add a new skill, subagent, command, or rule to the plugin, or a backward-compatible capability.
-- **major** — remove or rename a component, or otherwise change behavior in a breaking way.
+| Bump | When the release's worst change is… |
+| --- | --- |
+| **patch** | only fixes — a plugin's per-plugin **patch**, or an `agentry.py` fix |
+| **minor** | something **added** — a plugin's new component (per-plugin **minor**), a plugin **added**, or a new `agentry.py` capability (new flag, channel, or subcommand) |
+| **major** | something **removed, renamed, or breaking** — a plugin's per-plugin **major**, a plugin **removed or renamed**, or a breaking `agentry.py` CLI/behavior change |
 
-Bump versions by editing `agentry.json`, then regenerate the packaging (`python3 scripts/agentry.py generate`).
+This adds little extra judgment: each plugin's bump level is already chosen above, and the project bump rolls those up alongside any catalog/CLI change. Changes with no observable surface — tests, no-op refactors, dev docs (`AGENTS.md`), or CI tweaks — do not bump it and are not tagged.
+
+Bump versions by editing `agentry.json`, then regenerate the packaging (`python3 scripts/agentry.py generate`). Record each project release version as an annotated git tag `vX.Y.Z` matching the top-level `version`.
