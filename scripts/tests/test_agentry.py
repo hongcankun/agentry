@@ -126,6 +126,17 @@ class MarketplaceSourceTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             agentry.derive_marketplace_source(manifest)
 
+    def test_missing_both_error_names_active_manifest(self):
+        # The abort message must name the active manifest filename (via
+        # manifest_label()), so a downstream catalog's error points at its own
+        # manifest rather than the hardcoded agentry.json.
+        manifest = {"name": "x"}  # no repository, no owner
+        with mock.patch.object(agentry, "MANIFEST", Path("/tmp/whatever/downstream.json")):
+            with self.assertRaises(SystemExit) as cm:
+                agentry.derive_marketplace_source(manifest)
+        self.assertIn("downstream.json", str(cm.exception))
+        self.assertNotIn("agentry.json", str(cm.exception))
+
     def test_plugin_ref_and_name_helpers(self):
         manifest = {
             "name": "agentry",
@@ -1171,6 +1182,26 @@ class InventoryTests(unittest.TestCase):
         self.assertNotIn("plugin a", joined)
         self.assertNotIn("skill-one", joined)
 
+    def test_inventory_summary_title_falls_back_to_brand_when_name_empty(self):
+        # When the manifest has no name, the title falls back to BRAND, so a
+        # downstream catalog shows its own brand rather than the literal Agentry.
+        report = {
+            "name": "",
+            "version": "",
+            "plugins": [],
+            "totals": {
+                "plugins": 0,
+                "componentEntries": 0,
+                "components": {c: 0 for c in agentry.COMPONENTS},
+            },
+        }
+        with mock.patch.object(agentry, "BRAND", "Downstream"), \
+                mock.patch("builtins.print") as pr:
+            agentry.print_inventory_summary(report, set(agentry.COMPONENTS))
+        joined = "\n".join(str(c.args[0]) if c.args else "" for c in pr.call_args_list)
+        self.assertIn("Inventory: Downstream", joined)
+        self.assertNotIn("Inventory: Agentry", joined)
+
     def test_cmd_inventory_details_prints_component_membership(self):
         ns = _make_namespace(plugin="a", component=["skills"], color="never", paths=False, details=True, json=False)
         with mock.patch("builtins.print") as pr:
@@ -1620,6 +1651,30 @@ class PluginOrchestrationTests(unittest.TestCase):
         text = "\n".join(agentry._strip_color(r) for r in rows)
         self.assertIn("declined", text)
         self.assertIn("Agentry plugin(s) still installed", text)
+
+    def test_act_on_plugins_uninstall_remaining_note_honors_brand(self):
+        # The "<brand> plugin(s) still installed" note must read the active
+        # brand, so a downstream catalog's removal report names its own catalog.
+        args = _make_namespace(tool="trae", yes=False, dry_run=False)
+        manifest = self.repo.manifest_dict
+        plugins = [manifest["plugins"][0]]
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {"a": "marketplace"},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        with mock.patch.object(agentry, "BRAND", "Downstream"), \
+                mock.patch.object(agentry, "orchestrate_confirm", return_value=False), \
+                mock.patch.object(agentry, "run_tool_command"):
+            _, rows = agentry.act_on_plugins_uninstall(
+                args, manifest, plugins, interactive=False,
+                action_width=15, state=snapshot
+            )
+        text = "\n".join(agentry._strip_color(r) for r in rows)
+        self.assertIn("Downstream plugin(s) still installed", text)
+        self.assertNotIn("Agentry plugin(s) still installed", text)
 
     def test_act_on_plugins_uninstall_failed_plugin_keeps_marketplace(self):
         args = _make_namespace(tool="trae", yes=True, dry_run=False)
@@ -2232,22 +2287,65 @@ class DownstreamSeamTests(unittest.TestCase):
         self.assertEqual(agentry.MANIFEST, self._default_root.resolve() / "other.json")
 
     def test_prog_kwarg_sets_help_program_name(self):
-        # The downstream program name must propagate into help/usage text.
+        # The downstream program name must propagate into the usage/prog line.
         buf = io.StringIO()
         with redirect_stdout(buf), self.assertRaises(SystemExit):
             agentry.main(["--help"], repo_root=self.tmp,
                          manifest_name=self.manifest_name, prog="downstream")
         out = buf.getvalue()
-        self.assertIn("downstream", out)
+        self.assertIn("usage: downstream", out)
         self.assertNotIn("agentry.py", out)
 
     def test_default_prog_is_agentry_py(self):
+        # prog defaults to agentry.py in the usage line even when the manifest
+        # name (which legitimately appears elsewhere in help) differs.
         buf = io.StringIO()
         with redirect_stdout(buf), self.assertRaises(SystemExit):
             agentry.main(["--help"], repo_root=self.tmp, manifest_name=self.manifest_name)
         out = buf.getvalue()
-        self.assertIn("agentry.py", out)
-        self.assertNotIn("downstream", out)
+        self.assertIn("usage: agentry.py", out)
+        self.assertNotIn("usage: downstream", out)
+
+    def test_brand_kwarg_sets_help_banner_and_run_header(self):
+        # The downstream brand must replace "Agentry" in the help banner and in
+        # the install/status/uninstall run-header title.
+        buf = io.StringIO()
+        with redirect_stdout(buf), self.assertRaises(SystemExit):
+            agentry.main(["--help"], repo_root=self.tmp,
+                         manifest_name=self.manifest_name, prog="downstream.py", brand="Downstream")
+        help_out = buf.getvalue()
+        self.assertIn("Downstream maintenance CLI.", help_out)
+        self.assertNotIn("Agentry maintenance CLI.", help_out)
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rv = agentry.main(
+                ["status", "--tool", "trae", "--defaults",
+                 "--project-dir", str(self.project), "--color", "never"],
+                repo_root=self.tmp, manifest_name=self.manifest_name,
+                prog="downstream.py", brand="Downstream")
+        header = buf.getvalue()
+        self.assertEqual(rv, 1)  # fresh project: everything missing -> drift
+        self.assertIn("Downstream — trae,", header)
+        self.assertNotIn("Agentry — trae,", header)
+
+    def test_default_brand_keeps_agentry_in_help_and_header(self):
+        # With brand defaulted, help/header text stays "Agentry" even for an
+        # injected downstream root, preserving Agentry's own output.
+        buf = io.StringIO()
+        with redirect_stdout(buf), self.assertRaises(SystemExit):
+            agentry.main(["--help"], repo_root=self.tmp, manifest_name=self.manifest_name)
+        self.assertIn("Agentry maintenance CLI.", buf.getvalue())
+
+    def test_generate_help_names_downstream_manifest(self):
+        # The generate subcommand help must name the active manifest filename.
+        buf = io.StringIO()
+        with redirect_stdout(buf), self.assertRaises(SystemExit):
+            agentry.main(["generate", "--help"], repo_root=self.tmp,
+                         manifest_name=self.manifest_name, prog="downstream.py")
+        out = buf.getvalue()
+        self.assertIn("Regenerate per-tool packaging from downstream.json.", out)
+        self.assertNotIn("agentry.json", out)
 
     def test_explicit_argv_overrides_sys_argv(self):
         # An explicit argv list must win over a poisoned sys.argv.
@@ -2278,6 +2376,77 @@ class DownstreamSeamTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as cm:
             self._run("inventory")
         self.assertIn("manifest not found", str(cm.exception))
+
+    # --- generated provenance text names the active manifest/CLI -------------
+    # The seam threads repo_root/manifest_name/prog through path resolution AND
+    # the human-facing text baked into generated artifacts, so a downstream
+    # catalog's files point a maintainer at its own manifest/CLI rather than the
+    # (read-only, submodule) agentry.json / scripts/agentry.py.
+
+    def _generated_blobs(self):
+        """Return every generated artifact's text after a downstream generate."""
+        return {
+            "trae": (self.tmp / ".trae-plugin" / "marketplace.json").read_text(encoding="utf-8"),
+            "claude": (self.tmp / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"),
+            "plugin": (self.tmp / "plugins" / "a" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"),
+            "skillref": (
+                self.tmp / "plugins" / "a" / "skills" / "skill-one" / "references" / "a.md"
+            ).read_text(encoding="utf-8"),
+        }
+
+    def _generate(self, *argv, prog="downstream.py"):
+        """Run generate against the fixture as a downstream catalog named ``prog``."""
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rv = agentry.main(
+                list(argv), repo_root=self.tmp,
+                manifest_name=self.manifest_name, prog=prog)
+        return rv, buf.getvalue()
+
+    def test_generated_text_names_downstream_manifest_and_cli(self):
+        # The $generated banner (both marketplaces) and the skillReferences note
+        # must name the injected manifest filename and downstream CLI path.
+        rv, _ = self._generate("generate")
+        self.assertEqual(rv, 0)
+        blobs = self._generated_blobs()
+        self.assertEqual(
+            json.loads(blobs["trae"])["$generated"],
+            "GENERATED from downstream.json by 'scripts/downstream.py generate trae'. Do not edit by hand.",
+        )
+        self.assertEqual(
+            json.loads(blobs["claude"])["$generated"],
+            "GENERATED from downstream.json by 'scripts/downstream.py generate claude'. Do not edit by hand.",
+        )
+        self.assertIn("by 'scripts/downstream.py generate'", blobs["skillref"])
+
+    def test_generated_text_never_leaks_agentry_literals(self):
+        # The negative guard: no generated artifact may reference Agentry's own
+        # manifest filename or CLI path when a downstream catalog generated it.
+        self._generate("generate")
+        for label, blob in self._generated_blobs().items():
+            self.assertNotIn("agentry.json", blob, f"agentry.json leaked into {label}")
+            self.assertNotIn("scripts/agentry.py", blob, f"scripts/agentry.py leaked into {label}")
+
+    def test_check_message_names_downstream_cli(self):
+        # The `generate --check` "out of date" hint must point at the downstream
+        # CLI so a maintainer runs the right command to refresh packaging.
+        self._generate("generate")
+        trae = self.tmp / ".trae-plugin" / "marketplace.json"
+        trae.write_text(trae.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        rv, out = self._generate("generate", "--check")
+        self.assertEqual(rv, 1)
+        self.assertIn("run 'scripts/downstream.py generate'", out)
+        self.assertNotIn("scripts/agentry.py", out)
+
+    def test_default_prog_keeps_agentry_cli_in_generated_text(self):
+        # With prog defaulted, generated text uses scripts/agentry.py while the
+        # manifest name still follows the injected manifest: proves the manifest
+        # label derives from MANIFEST and the CLI name from prog, independently.
+        self._generate("generate", prog=agentry.DEFAULT_PROG)
+        self.assertEqual(
+            json.loads((self.tmp / ".trae-plugin" / "marketplace.json").read_text(encoding="utf-8"))["$generated"],
+            "GENERATED from downstream.json by 'scripts/agentry.py generate trae'. Do not edit by hand.",
+        )
 
 
 
