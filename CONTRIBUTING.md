@@ -13,7 +13,7 @@ Follow the maintenance workflow in [`AGENTS.md`](./AGENTS.md#maintenance-workflo
 
 1. Edit the content under `plugins/<plugin>/` (skills/subagents) or `rules/` (rules).
 2. Update [`agentry.json`](./agentry.json) to reflect any added/removed/renamed component.
-3. Bump versions per the [Versioning policy](./README.md#versioning) (per-plugin SemVer; top-level only for catalog changes).
+3. Bump versions per the [Versioning policy](./README.md#versioning): the changed plugin's `version` (per-plugin SemVer), and the top-level project release `version` to the most-severe change in the release (`max()` of the per-plugin bumps and any catalog/CLI change).
 4. Regenerate packaging:
    ```bash
    python3 scripts/agentry.py generate
@@ -31,7 +31,7 @@ Follow the maintenance workflow in [`AGENTS.md`](./AGENTS.md#maintenance-workflo
 
 ## Proposing a new plugin
 
-A new plugin is a catalog-level change: add it to `agentry.json` under `plugins`, create its directory under `plugins/<name>/`, bump the top-level `version`, and regenerate. Use the `plugin-manager` skill for the layout and manifest details, and explain the rationale in your PR description.
+A new plugin changes the plugin set: add it to `agentry.json` under `plugins`, create its directory under `plugins/<name>/`, bump the top-level `version` (a **minor** project release bump, or **major** if the same release also removes or renames something), and regenerate. Use the `plugin-manager` skill for the layout and manifest details, and explain the rationale in your PR description.
 
 ## Commits and pull requests
 
