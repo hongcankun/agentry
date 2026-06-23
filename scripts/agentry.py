@@ -73,13 +73,45 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-MANIFEST = REPO_ROOT / "agentry.json"
+# Default repo root for Agentry's own checkout: the parent of scripts/. A
+# downstream catalog reusing this module via git submodule keeps its own content
+# elsewhere, so it injects its root/manifest via main(); see configure().
+# __file__ would otherwise resolve inside the submodule and point every path at
+# Agentry's own content.
+DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_MANIFEST_NAME = "agentry.json"
+
+# Resolved repo location and derived paths. These module globals are the runtime
+# config every command reads; configure() recomputes them from a repo root and
+# manifest name, and main() calls it once per invocation. They default to
+# Agentry's own checkout so importing the module (and `scripts/agentry.py ...`)
+# behaves exactly as before.
+REPO_ROOT = DEFAULT_REPO_ROOT
+MANIFEST = REPO_ROOT / DEFAULT_MANIFEST_NAME
 PLUGINS_DIR = REPO_ROOT / "plugins"
 RULES_DIR = REPO_ROOT / "rules"
 
 CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
+
+
+def configure(repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME):
+    """Point the CLI at a repo root and manifest, recomputing derived paths.
+
+    ``repo_root=None`` selects Agentry's own checkout (``DEFAULT_REPO_ROOT``),
+    preserving the original behavior exactly. A downstream wrapper passes its own
+    root and manifest filename so install/uninstall/generate/status/inventory all
+    operate against that tree instead of the (submodule) location of this file.
+    """
+    global REPO_ROOT, MANIFEST, PLUGINS_DIR, RULES_DIR
+    global CLAUDE_MARKETPLACE, TRAE_MARKETPLACE
+    REPO_ROOT = (DEFAULT_REPO_ROOT if repo_root is None else Path(repo_root)).resolve()
+    MANIFEST = REPO_ROOT / manifest_name
+    PLUGINS_DIR = REPO_ROOT / "plugins"
+    RULES_DIR = REPO_ROOT / "rules"
+    CLAUDE_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
+    TRAE_MARKETPLACE = REPO_ROOT / ".trae-plugin" / "marketplace.json"
+
 
 COMPONENTS = ("skills", "agents", "commands", "rules")
 COMPONENT_CHOICES = COMPONENTS + ("all",)
@@ -1967,9 +1999,24 @@ class _SubcommandHelpFormatter(argparse.HelpFormatter):
         return parts
 
 
-def main():
+def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog="agentry.py"):
+    """Run the CLI against ``repo_root``/``manifest_name`` (Agentry's own by default).
+
+    Keyword-only ``repo_root``/``manifest_name``/``prog`` are the reusable seam: a
+    downstream catalog reusing this module via git submodule calls
+    ``main(repo_root=<its root>, manifest_name=<its manifest>, prog=<its name>)``
+    so every command operates on its tree and its help reads its own program
+    name. The defaults reproduce ``scripts/agentry.py`` behavior byte-for-byte.
+    ``argv`` defaults to ``sys.argv[1:]``.
+    """
+    # Configure from this call's arguments on every invocation, so the result
+    # never depends on a previous in-process call: a plain main() resets to
+    # Agentry's own checkout, and an injected one targets the given tree. (Tests
+    # that drive cmd_* directly still patch the globals; they do not go through
+    # main().)
+    configure(repo_root, manifest_name)
     parser = argparse.ArgumentParser(
-        prog="agentry.py",
+        prog=prog,
         description="Agentry maintenance CLI.",
         formatter_class=_SubcommandHelpFormatter,
     )
@@ -2058,7 +2105,7 @@ def main():
     add_color_arg(p_generate)
     p_generate.set_defaults(func=cmd_generate)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.command is None:
         parser.print_help()
         return 0

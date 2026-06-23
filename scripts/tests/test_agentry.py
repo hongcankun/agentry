@@ -13,6 +13,7 @@ output of ``claude`` / ``traecli`` rather than shelling out to a real install.
 import argparse
 import filecmp
 import importlib.util
+import io
 import json
 import os
 import re
@@ -21,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -2044,9 +2045,11 @@ class MainTests(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.tmp = Path(self._tmp.name)
+        # main() reconfigures from its own arguments, so drive it through the
+        # public seam (repo_root=self.tmp) rather than patching the globals. The
+        # fixture manifest keeps the default name (agentry.json), so manifest_name
+        # stays at its default.
         self.repo = _FakeRepo(self.tmp)
-        for p in self.repo.patches():
-            p.start()
         agentry.init_colors(False)
         self.project = self.tmp / "project"
         self.project.mkdir()
@@ -2057,66 +2060,224 @@ class MainTests(unittest.TestCase):
     def tearDown(self):
         sys.argv = self._orig_argv
         self._patcher.stop()
-        for p in self.repo.patches():
-            p.stop()
+        # Restore the module to its default configuration for later test classes.
+        agentry.configure()
         agentry.init_colors(False)
         self._tmp.cleanup()
 
+    def _main(self, *argv):
+        """Drive main() against the fixture checkout via the public seam."""
+        sys.argv = ["agentry.py", *argv]
+        return agentry.main(repo_root=self.tmp)
+
     def test_main_generate_all_runs_to_completion(self):
-        sys.argv = ["agentry.py", "generate"]
-        self.assertEqual(agentry.main(), 0)
+        self.assertEqual(self._main("generate"), 0)
         self.assertTrue((self.tmp / ".claude-plugin" / "marketplace.json").exists())
 
     def test_main_generate_check_detects_drift(self):
         # Run once to generate, then mutate a generated file, then run
         # --check and confirm the return code.
-        sys.argv = ["agentry.py", "generate"]
-        agentry.main()
+        self._main("generate")
         target = self.tmp / ".claude-plugin" / "marketplace.json"
         target.write_text("DRIFTED", encoding="utf-8")
-        sys.argv = ["agentry.py", "generate", "--check"]
-        self.assertEqual(agentry.main(), 1)
+        self.assertEqual(self._main("generate", "--check"), 1)
 
     def test_main_install_and_uninstall_checkout_default_flow(self):
-        sys.argv = [
-            "agentry.py", "install",
+        self.assertEqual(self._main(
+            "install",
             "--tool", "trae", "--plugin", "a",
             "--component", "rules", "--yes", "--defaults",
             "--project-dir", str(self.project),
             "--color", "never",
-        ]
-        self.assertEqual(agentry.main(), 0)
+        ), 0)
         self.assertTrue((self.project / ".trae" / "rules" / "code-quality" / "a.md").exists())
 
-        sys.argv = [
-            "agentry.py", "uninstall",
+        self.assertEqual(self._main(
+            "uninstall",
             "--tool", "trae", "--plugin", "a",
             "--component", "rules", "--yes", "--defaults",
             "--project-dir", str(self.project),
             "--color", "never",
-        ]
-        self.assertEqual(agentry.main(), 0)
+        ), 0)
         self.assertFalse((self.project / ".trae" / "rules" / "code-quality" / "a.md").exists())
 
     def test_main_status_does_not_write(self):
-        sys.argv = [
-            "agentry.py", "status",
+        self._main(
+            "status",
             "--tool", "trae", "--defaults",
             "--project-dir", str(self.project),
             "--color", "never",
-        ]
-        agentry.main()
+        )
         self.assertFalse((self.project / ".trae").exists())
 
     def test_main_unknown_command_exits_nonzero(self):
-        sys.argv = ["agentry.py", "nope"]
         with self.assertRaises(SystemExit) as cm:
-            agentry.main()
+            self._main("nope")
         self.assertNotEqual(cm.exception.code, 0)
         self.assertNotEqual(cm.exception.code, None)
 
     def test_main_no_subcommand_prints_help_and_returns_zero(self):
         # When no subcommand is given, main() prints help and returns 0
         # (rather than erroring out).
-        sys.argv = ["agentry.py"]
-        self.assertEqual(agentry.main(), 0)
+        self.assertEqual(self._main(), 0)
+
+
+# ---------------------------------------------------------------------------
+# Reusable seam: main(repo_root=..., manifest_name=...) lets a downstream
+# catalog (reusing this module via git submodule) drive the CLI against its own
+# tree and manifest filename. These tests do NOT patch the module globals — they
+# rely on main()/configure() to resolve every path from the injected root, so
+# they prove the seam works on its own.
+# ---------------------------------------------------------------------------
+
+
+class DownstreamSeamTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        # A fixture catalog whose manifest is intentionally NOT named
+        # agentry.json, so a path leak back to the default manifest would fail.
+        self.repo = _FakeRepo(self.tmp)
+        self.manifest_name = "downstream.json"
+        self.repo.manifest_path.rename(self.tmp / self.manifest_name)
+        self.project = self.tmp / "project"
+        self.project.mkdir()
+        self._orig_argv = sys.argv[:]
+        # Capture the resolved defaults so we can assert isolation: the module
+        # globals must point back at Agentry's own checkout after each run.
+        self._default_root = agentry.DEFAULT_REPO_ROOT
+        agentry.init_colors(False)
+
+    def tearDown(self):
+        sys.argv = self._orig_argv
+        # Restore the module to its default configuration for later tests.
+        agentry.configure()
+        agentry.init_colors(False)
+        self._tmp.cleanup()
+
+    def _run(self, *argv):
+        """Run main() against the fixture catalog, swallowing stdout."""
+        with redirect_stdout(io.StringIO()):
+            return agentry.main(
+                list(argv),
+                repo_root=self.tmp,
+                manifest_name=self.manifest_name,
+            )
+
+    def test_generate_reads_injected_manifest_not_agentry_json(self):
+        # No agentry.json exists in the fixture; generate must read the injected
+        # manifest and write packaging under the injected root, not the submodule
+        # dir.
+        self.assertFalse((self.tmp / "agentry.json").exists())
+        rv = self._run("generate")
+        self.assertEqual(rv, 0)
+        self.assertTrue((self.tmp / ".claude-plugin" / "marketplace.json").exists())
+        self.assertTrue((self.tmp / ".trae-plugin" / "marketplace.json").exists())
+        # The generated catalog reflects the fixture manifest's name.
+        data = json.loads((self.tmp / ".trae-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["name"], self.repo.manifest_dict["name"])
+
+    def test_install_writes_under_injected_root(self):
+        rv = self._run(
+            "install", "--tool", "trae", "--plugin", "a",
+            "--component", "rules", "--yes", "--defaults",
+            "--project-dir", str(self.project), "--color", "never",
+        )
+        self.assertEqual(rv, 0)
+        self.assertTrue((self.project / ".trae" / "rules" / "code-quality" / "a.md").exists())
+
+    def test_default_main_after_injected_run_resets_to_agentry_checkout(self):
+        # The real regression guard for sequential / repeated main() calls: an
+        # injected run must not leave the module globals pointed at the fixture.
+        # A subsequent plain main() must operate on Agentry's own checkout.
+        self._run("generate")
+        self.assertNotEqual(agentry.REPO_ROOT, self._default_root.resolve())  # injection took effect
+        sys.argv = ["agentry.py", "inventory", "--color", "never"]
+        with redirect_stdout(io.StringIO()):
+            rv = agentry.main()  # plain call, no kwargs
+        self.assertEqual(rv, 0)
+        self.assertEqual(agentry.REPO_ROOT, self._default_root.resolve())
+        self.assertEqual(agentry.MANIFEST, self._default_root.resolve() / "agentry.json")
+
+    def test_default_main_still_targets_agentry_checkout(self):
+        # A plain main() call (no kwargs) must resolve to Agentry's own root and
+        # agentry.json, preserving existing `scripts/agentry.py ...` behavior.
+        sys.argv = ["agentry.py", "inventory", "--color", "never"]
+        with redirect_stdout(io.StringIO()):
+            rv = agentry.main()
+        self.assertEqual(rv, 0)
+        self.assertEqual(agentry.REPO_ROOT, self._default_root.resolve())
+        self.assertEqual(agentry.MANIFEST, self._default_root.resolve() / "agentry.json")
+
+    def test_inject_root_only_uses_default_manifest_name(self):
+        # repo_root given, manifest_name defaulted: must read <root>/agentry.json
+        # (the `repo_root is not None` arm of the seam, exercised in isolation).
+        default_manifest = self.tmp / "agentry.json"
+        default_manifest.write_text(
+            (self.tmp / self.manifest_name).read_text(encoding="utf-8"), encoding="utf-8")
+        sys.argv = ["agentry.py", "inventory", "--color", "never"]
+        with redirect_stdout(io.StringIO()):
+            rv = agentry.main(repo_root=self.tmp)
+        self.assertEqual(rv, 0)
+        self.assertEqual(agentry.REPO_ROOT, self.tmp.resolve())
+        self.assertEqual(agentry.MANIFEST, self.tmp.resolve() / "agentry.json")
+
+    def test_inject_manifest_name_only_targets_default_root(self):
+        # manifest_name given, repo_root defaulted: must target the default root
+        # with the given manifest filename (the manifest_name arm in isolation).
+        sys.argv = ["agentry.py", "--help"]
+        with redirect_stdout(io.StringIO()), self.assertRaises(SystemExit):
+            agentry.main(["--help"], manifest_name="other.json")
+        self.assertEqual(agentry.REPO_ROOT, self._default_root.resolve())
+        self.assertEqual(agentry.MANIFEST, self._default_root.resolve() / "other.json")
+
+    def test_prog_kwarg_sets_help_program_name(self):
+        # The downstream program name must propagate into help/usage text.
+        buf = io.StringIO()
+        with redirect_stdout(buf), self.assertRaises(SystemExit):
+            agentry.main(["--help"], repo_root=self.tmp,
+                         manifest_name=self.manifest_name, prog="downstream")
+        out = buf.getvalue()
+        self.assertIn("downstream", out)
+        self.assertNotIn("agentry.py", out)
+
+    def test_default_prog_is_agentry_py(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf), self.assertRaises(SystemExit):
+            agentry.main(["--help"], repo_root=self.tmp, manifest_name=self.manifest_name)
+        out = buf.getvalue()
+        self.assertIn("agentry.py", out)
+        self.assertNotIn("downstream", out)
+
+    def test_explicit_argv_overrides_sys_argv(self):
+        # An explicit argv list must win over a poisoned sys.argv.
+        sys.argv = ["agentry.py", "this-would-error"]
+        rv = self._run("inventory", "--color", "never")
+        self.assertEqual(rv, 0)
+
+    def test_generate_output_confinement_uses_injected_root(self):
+        # Prove the write_or_check escape guard re-anchors to the INJECTED root.
+        # A static "../.." rule path would be rejected earlier by
+        # validate_path_fragment and never reach the output guard, so instead
+        # symlink the skill's references/ dir to a location outside the injected
+        # root: the rule path stays a valid fragment, but the resolved write
+        # destination escapes, which only write_or_check (keyed on REPO_ROOT) can
+        # catch. The fixture manifest already declares
+        # skillReferences {"skill-one": ["code-quality/a.md"]}.
+        escape_dir = self.tmp.parent
+        refs = self.tmp / "plugins" / "a" / "skills" / "skill-one" / "references"
+        refs.symlink_to(escape_dir, target_is_directory=True)
+        with self.assertRaises(SystemExit) as cm:
+            self._run("generate")
+        self.assertIn("escapes", str(cm.exception))
+        # Nothing was written through the escaping symlink.
+        self.assertFalse((escape_dir / "a.md").exists())
+
+    def test_missing_injected_manifest_aborts_with_manifest_error(self):
+        (self.tmp / self.manifest_name).unlink()
+        with self.assertRaises(SystemExit) as cm:
+            self._run("inventory")
+        self.assertIn("manifest not found", str(cm.exception))
+
+
+
