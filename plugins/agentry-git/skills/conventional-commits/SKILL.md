@@ -52,11 +52,13 @@ A noun describing a section of the codebase surrounded by parenthesis, e.g., `fi
 
 ### Description (required)
 
-A short, imperative, present tense description of the change. Do not capitalize the first letter. No dot (.) at the end.
+A short, imperative, present tense description of the change. Do not capitalize the first letter. No dot (.) at the end. Keep the subject line short (around 50 characters, 72 max).
 
 ### Body (optional)
 
 A longer, imperative, present tense description of the change, providing additional context.
+
+Do not hard-wrap (auto-fold) body text at a fixed column: write each paragraph as a single line and let the viewer soft-wrap it. Separate paragraphs with a blank line, and use list markers where structure is intended.
 
 ### Footer(s) (optional)
 
