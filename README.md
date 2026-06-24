@@ -111,7 +111,8 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **prepare-commit** command: Inspect repository changes, stage a focused commit, and create a Conventional Commit after confirmation.
 - **prepare-pr** command: Inspect branch state and draft or create a pull request with a Conventional Commit title after confirmation.
 - **finish-pr** command: Clean up after a merged pull request by updating the base branch and deleting the local feature branch after confirmation.
-- **tag-release** command: Create or verify an annotated release tag, and push it only after explicit confirmation.
+- **prepare-release** command: Prepare a project release commit by updating version, generated metadata, and release notes.
+- **publish-release** command: Publish a prepared release by verifying the merged release state, tagging it, and optionally creating hosted release notes.
 - **vcs/conventional-commits** rule: Policy for when the Conventional Commits format applies and what a commit message must satisfy before committing; defers the message format and validation procedure to the `conventional-commits` skill.
 
 ### [agentry-authoring](./plugins/agentry-authoring)
@@ -165,16 +166,24 @@ Versions live in `agentry.json` and propagate to the generated packaging. Two le
   - **patch** — wording fixes, clarifications, or non-behavioral edits to existing components.
   - **minor** — add a new skill, subagent, command, or rule to the plugin, or a backward-compatible capability.
   - **major** — remove or rename a component, or otherwise change behavior in a breaking way.
-- **Top-level `version`** — the **project release version**, and the value used for git release tags (`vX.Y.Z`). It applies SemVer to the repo's whole observable surface: the **plugin set** (what's installed) plus the **`agentry.py`** install/generate CLI that downstream consumers pin and run. It is also emitted into Claude Code's `marketplace.json`, but neither tool keys plugin updates off it, so it is purely a human/release/downstream-pin marker.
+  - While a plugin is still `0.x`, breaking changes may use a **minor** bump rather than jumping to `1.0.0`; once a plugin reaches `1.0.0`, breaking changes use **major** bumps.
+- **Top-level `version`** — the **project release version**, and the value used for git release tags (`vX.Y.Z`). It is a SemVer snapshot marker for the repo's whole observable surface: the **plugin set** (what's installed) plus the **`agentry.py`** install/generate CLI that downstream consumers pin and run. It is also emitted into Claude Code's `marketplace.json`, but neither tool keys plugin updates off it, so it is purely a human/release/downstream-pin marker.
 
-Bump the project release version to the **most-severe change** in the release — a rollup: the `max()` of every per-plugin bump and any catalog/CLI change, on the same SemVer scale:
+Bump affected plugin versions in normal change PRs when plugin content should be delivered through plugin marketplaces. Bump the top-level project release version only in an explicit release-prep change, usually prepared with `prepare-release`; publish the merged release later with `publish-release`. Between project releases, plugin versions on the rolling marketplace/main channel may be ahead of the versions recorded in the latest project tag; the project tag remains the reproducible full-repo snapshot.
+
+When preparing a project release, choose the top-level version by the **most-severe change** since the previous project tag — a rollup: the `max()` of every per-plugin bump and any catalog/CLI change included in the release, on the same SemVer scale. While the project itself is still `0.x`, breaking observable changes may use a **minor** project bump rather than jumping to `1.0.0`; once the project reaches `1.0.0`, breaking observable changes use **major** bumps.
 
 | Bump | When the release's worst change is… |
 | --- | --- |
 | **patch** | only fixes — a plugin's per-plugin **patch**, or an `agentry.py` fix |
 | **minor** | something **added** — a plugin's new component (per-plugin **minor**), a plugin **added**, or a new `agentry.py` capability (new flag, channel, or subcommand) |
-| **major** | something **removed, renamed, or breaking** — a plugin's per-plugin **major**, a plugin **removed or renamed**, or a breaking `agentry.py` CLI/behavior change |
+| **major** | after `1.0.0`, something **removed, renamed, or breaking** — a plugin's per-plugin **major**, a plugin **removed or renamed**, or a breaking `agentry.py` CLI/behavior change |
 
-This adds little extra judgment: each plugin's bump level is already chosen above, and the project bump rolls those up alongside any catalog/CLI change. Changes with no observable surface — tests, no-op refactors, dev docs (`AGENTS.md`), or CI tweaks — do not bump it and are not tagged.
+At release time, roll up the plugin bumps already chosen in change PRs plus any catalog/CLI change since the previous project tag. Changes with no observable surface — tests, no-op refactors, dev docs (`AGENTS.md`), or CI tweaks — do not affect the project release bump.
 
-Bump versions by editing `agentry.json`, then regenerate the packaging (`python3 scripts/agentry.py generate`). Record each project release version as an annotated git tag `vX.Y.Z` matching the top-level `version`.
+Release workflow:
+
+- Normal change PRs bump only affected per-plugin versions and regenerate packaging with `python3 scripts/agentry.py generate`.
+- Release-prep PRs bump the top-level project `version`, update [`CHANGELOG.md`](./CHANGELOG.md) with `git-cliff --output CHANGELOG.md`, regenerate packaging if the manifest changed, and commit those release files.
+- Release-prep commits such as `chore(release): prepare vX.Y.Z` are excluded from the generated changelog so release notes focus on user-facing plugin/tooling changes.
+- After the release PR merges, publish the release with an annotated tag `vX.Y.Z` matching the top-level `version`. Pushing tags and creating hosted releases are shared actions that require confirmation.

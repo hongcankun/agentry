@@ -30,8 +30,7 @@ If the target branch, feature branch, or merge status is unclear, ask one concis
    - update it with a fast-forward only pull, such as `git pull --ff-only`;
    - delete the local feature branch with `git branch -d <feature-branch>`;
    - prune stale remote-tracking refs with `git fetch --prune`.
-7. If the merged pull request bumped a release version according to repository policy, report that a release tag is needed and recommend running `tag-release` for the matching version. Do not create or push a tag from `finish-pr` unless the user explicitly asks to continue with release tagging.
-8. Verify with `git status --short --branch` and `git branch --list <feature-branch>`.
+7. Verify with `git status --short --branch` and `git branch --list <feature-branch>`.
 
 ## Constraints
 
@@ -47,5 +46,4 @@ Return:
 - the base branch updated;
 - the local branch deleted or intentionally kept;
 - whether pruning ran;
-- whether a release tag follow-up appears needed, and the recommended `tag-release` invocation when applicable;
 - final repository status and any blocked cleanup.

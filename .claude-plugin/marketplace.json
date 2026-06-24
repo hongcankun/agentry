@@ -45,7 +45,7 @@
       "name": "agentry-git",
       "source": "./agentry-git",
       "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "category": "vcs",
       "keywords": [
         "git",

@@ -1,0 +1,1 @@
+../../plugins/agentry-git/commands/publish-release.md
