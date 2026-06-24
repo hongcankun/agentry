@@ -111,6 +111,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **prepare-commit** command: Inspect repository changes, stage a focused commit, and create a Conventional Commit after confirmation.
 - **prepare-pr** command: Inspect branch state and draft or create a pull request with a Conventional Commit title after confirmation.
 - **finish-pr** command: Clean up after a merged pull request by updating the base branch and deleting the local feature branch after confirmation.
+- **tag-release** command: Create or verify an annotated release tag, and push it only after explicit confirmation.
 - **vcs/conventional-commits** rule: Policy for when the Conventional Commits format applies and what a commit message must satisfy before committing; defers the message format and validation procedure to the `conventional-commits` skill.
 
 ### [agentry-authoring](./plugins/agentry-authoring)
