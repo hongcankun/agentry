@@ -58,7 +58,7 @@ A short, imperative, present tense description of the change. Do not capitalize 
 
 A longer, imperative, present tense description of the change, providing additional context. Add a brief body when the subject alone does not explain important context, such as why the change exists, what behavior it adds, or why generated files changed.
 
-Wrap commit body prose at about 72 columns, following Git's conventional terminal-friendly formatting. Separate paragraphs with a blank line, and use list markers where structure is intended.
+Prefer wrapping commit body prose at about 72 columns for Git's conventional terminal-friendly formatting, but do not treat unwrapped body paragraphs as invalid Conventional Commits. Separate paragraphs with a blank line, and use list markers where structure is intended.
 
 ### Footer(s) (optional)
 
