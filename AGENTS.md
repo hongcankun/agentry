@@ -1,81 +1,64 @@
-# Agentry — Agent Instructions
+# Agentry Agent Instructions
 
-Project-specific guidance for AI agents working in **this repository**. This is meta-guidance for maintaining Agentry itself; it is **not** deliverable content and must not be packaged into any plugin or installed elsewhere.
+Project-specific guidance for AI agents maintaining this repository. This is meta-guidance only; do not package it into any plugin or install it elsewhere.
 
-## Source of truth
+## Source of Truth
 
-`agentry.json` is the canonical, tool-agnostic manifest: it defines every skill, subagent, command, and rule and how they group into plugins. **Edit `agentry.json`**, never the generated packaging.
+- Treat `agentry.json` as the canonical, tool-agnostic manifest for plugins, skills, subagents, commands, rules, versions, and component grouping.
+- Edit canonical sources under `plugins/` and `rules/`. Do not hand-edit generated packaging:
+  - `.claude-plugin/marketplace.json`
+  - `plugins/*/.claude-plugin/plugin.json`
+  - `.trae-plugin/marketplace.json`
+  - derived skill references under `plugins/<plugin>/skills/<skill>/references/`
+- For derived skill references, edit the canonical rule under `rules/`, then regenerate. Fence maintainer-only prose with `<!-- skill-reference:exclude:begin -->` and `<!-- skill-reference:exclude:end -->` when it must not appear in the portable skill copy.
 
-These files are **generated** — do not hand-edit them:
+## Extension Changes
 
-- `.claude-plugin/marketplace.json` and each `plugins/*/.claude-plugin/plugin.json` (Claude Code)
-- `.trae-plugin/marketplace.json` (Trae)
-- any derived skill reference declared via a plugin's `skillReferences` map — a copy of a canonical rule embedded under `plugins/<plugin>/skills/<skill>/references/` (e.g. `plugins/agentry-code-quality/skills/code-review/references/code-style.md`). Edit the canonical rule under `rules/`, then regenerate. To keep maintainer-only prose (e.g. a `## Related` section of ecosystem cross-links) out of the derived copy, fence it in the rule with `<!-- skill-reference:exclude:begin -->` / `<!-- skill-reference:exclude:end -->`; the markers render invisibly in the rule and the generator drops everything between them.
+When changing extensions or plugin membership:
 
-## Maintenance workflow
-
-When changing the extensions or plugin set, follow these steps in order:
-
-1. **Edit the content.** Add or modify skills/subagents/commands under `plugins/<plugin>/`, or rules under `rules/`. New skills must keep the standard layout (`skills/<name>/SKILL.md`, optional `references/`, `scripts/`, `assets/`); new commands live under `commands/<name>.md`.
-2. **Update `agentry.json`.** Reflect any added/removed/renamed component in the relevant plugin's `skills`/`agents`/`commands`/`rules` arrays (and its `skillReferences` map when embedding a rule's content into a skill), and its `description`/`keywords` if scope changed.
-3. **Bump versions.** Follow the Versioning policy in `README.md`. Two levels:
-   - Bump the changed plugin's `version` independently (SemVer — patch = fixes, minor = added component, major = removed/renamed/breaking).
-   - While a plugin is still `0.x`, breaking changes may use a **minor** bump rather than jumping to `1.0.0`; once a plugin reaches `1.0.0`, breaking changes use **major** bumps.
-   - Do **not** bump the top-level `version` in ordinary change PRs. The top-level **project release version** moves only in explicit release-prep PRs.
-4. **Regenerate packaging.**
+1. Edit the canonical content: skills, agents, and commands under `plugins/<plugin>/`; rules under `rules/`.
+2. Update `agentry.json` for added, removed, or renamed components, plugin metadata, rules associations, `skillReferences`, and the changed plugin's SemVer `version`.
+3. Do not bump the top-level project release `version` in ordinary change PRs. Bump it only in explicit release-prep PRs, following `README.md#versioning`.
+4. Regenerate packaging with `python3 scripts/agentry.py generate`.
+5. Keep `README.md` in sync when user-facing plugin, skill, command, rule, or workflow documentation changes.
+6. In release-prep PRs only, update `CHANGELOG.md` with `git-cliff --output CHANGELOG.md`.
+7. Validate with:
    ```bash
-   python3 scripts/agentry.py generate
+   python3 scripts/agentry.py generate --check
+   python3 -m unittest discover scripts/tests
    ```
-5. **Update release notes when needed.** In release-prep PRs, update the generated changelog:
-   ```bash
-   git-cliff --output CHANGELOG.md
-   ```
-   Release-prep commits such as `chore(release): prepare vX.Y.Z` are intentionally excluded from `CHANGELOG.md`; the changelog should describe user-facing plugin/tooling changes, not the metadata commit that packages them.
-6. **Update `README.md`.** Keep the plugin/skill list and any affected sections in sync with the change.
-7. **Validate.**
-   - For each new/changed skill, subagent, command, or rule, use the matching `agentry-authoring` skill (`skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, `plugin-manager`); each defines and runs its own validation. Do not reach into a skill's internal scripts directly from here.
-   - Confirm the generated packaging is current (CI enforces this on push/PR via `.github/workflows/check.yml`):
-     ```bash
-     python3 scripts/agentry.py generate --check
-     ```
-   - Run the test suite (stdlib `unittest` — no extra dependencies):
-     ```bash
-     python3 -m unittest discover scripts/tests
-     ```
+
+For each new or changed extension artifact, use the matching `agentry-authoring` skill (`skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, or `plugin-manager`) and follow that skill's validation. Do not call a skill's private helper scripts directly from here.
 
 ## Dogfooding
 
-Agentry maintains itself with its own plugins, enabled **only for this project**. The committed `.trae/{rules,skills,agents,commands}` entries are symlinked, so they activate when working here (and for anyone who clones the repo) without affecting other projects and without copying content into the tree. Restart the CLI after changing those symlinks.
+Agentry dogfoods its own plugins only in this repository. The committed `.trae/{skills,agents,commands,rules}` entries for Agentry-owned content must remain symlinks back to canonical sources, so local changes activate here without copying content or affecting other projects.
 
-Which plugins to enable is a **deliberate, hand-maintained choice** — not every plugin needs to be active here, so do not auto-generate this set from `agentry.json`. Add or remove project-scoped Trae dogfooding components by running `python3 scripts/agentry.py install --tool trae --plugin <plugin> --symlink --component all`.
+- Do not auto-generate the project-local dogfooding set from `agentry.json`; enabled plugins are a deliberate, hand-maintained choice.
+- Add or remove project-scoped Trae dogfooding with `python3 scripts/agentry.py install --tool trae --plugin <plugin> --symlink --component all`.
+- Do not copy Agentry-owned skills, agents, commands, or rules into `.trae/`. External third-party content may be committed there when appropriate.
+- Rules are not delivered by plugin formats. Activate enabled plugin rules for this repo through `.trae/rules/` symlinks to `rules/`.
+- Use `--dry-run` before uncertain install or uninstall operations. See `README.md` for the marketplace vs. checkout channel details.
+- Restart the CLI after changing dogfooding symlinks.
 
-Use these while working here: `conventional-commits`/`git-workflow` for commits and branches, `code-review` for reviewing changes, and the `agentry-authoring` skills (including `plugin-manager`) when adding or editing extensions.
+Use the dogfooded `conventional-commits` and `git-workflow` skills for git work, `code-review` for reviews, and the `agentry-authoring` skills when editing extensions.
 
-Keep the source canonical:
+## Git Workflow
 
-- Edit `plugins/` and `rules/` only; the committed `.trae/skills`, `.trae/agents`, `.trae/commands`, and `.trae/rules` entries for Agentry's own content must remain symlinks back to those canonical sources.
-- Do **not** install Agentry's own plugins by **copying** their components into `.trae/skills`, `.trae/agents`, `.trae/commands`, `.trae/rules` — that would duplicate the source of truth under `plugins/` and `rules/` and drift. Use `python3 scripts/agentry.py install --tool trae --symlink --component all` instead. (Committing *external*, third-party skills/agents/commands/rules into `.trae/` is fine — only Agentry's own content must not be copied there.)
-- Rules are not delivered by plugins, so each enabled plugin's rules are activated for this repo by **symlinks** under `.trae/rules/` pointing back to the canonical files under `rules/`. Skills, agents, and commands used for Trae dogfooding are likewise symlinked from `.trae/skills/`, `.trae/agents/`, and `.trae/commands/` back into `plugins/`. The symlinks track the canonical source with no copy; do not replace them with copied files.
-- `agentry.py install`/`uninstall` has two delivery channels (`--source {marketplace,checkout}`). The **marketplace** channel orchestrates the tool's own CLI to add the marketplace and install/remove plugins; these plugins are user-scoped, so it forces `--global` and is the default for `--global` runs. The **checkout** channel copies or symlinks components straight from this checkout and is the project-scope default (passing `--component` also selects it). Rules are never delivered by a plugin — both channels copy them. Use `--dry-run` to preview any run without writing; see README.md for the full flag set.
+- Never commit directly to `main`. Land changes through a short-lived branch and pull request.
+- Name branches as `type/short-description`, with a lowercase hyphenated description, and keep the type aligned with the Conventional Commit type.
+- Use Conventional Commits for commit messages and PR titles.
+- Add a brief commit body when the subject alone does not explain important context. Hard-wrap commit body prose at about 72 columns.
+- Always ask for explicit confirmation before pushing, opening a PR, updating a PR, pushing tags, or creating/publishing a GitHub Release.
+- For local-only reversible git operations, state the plan and proceed without a separate confirmation when the scope is clear. This includes staging and committing drafted changes, switching clean branches, `git pull --ff-only` on the base branch, `git branch -d`, and `git fetch --prune`.
+- Stop and ask before destructive commands, unclear merge cleanup, dirty-worktree branch switches, ambiguous commit scope, or any `git reset --hard` style shortcut.
+- After a PR merges, switch to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs. If squash-merge cleanup needs `git branch -D`, first confirm patch equivalence with `git log --cherry <base>...<branch>`.
+- Write PR bodies from `.github/pull_request_template.md`. Do not hard-wrap PR body paragraphs; let the hosting UI soft-wrap them. When a checklist item does not apply, mark it checked and append `- N/A: <reason>`.
 
-## Git workflow
+## Authoring Conventions
 
-This repo follows a PR-based flow; apply it on top of the `git-workflow` and `conventional-commits` skills:
-
-- Never commit directly to `main`. Land every change via a short-lived feature branch and a pull request.
-- Name branches with the `type/short-description` form, where `short-description` is lowercase and hyphenated (for example, `fix/branch-naming-policy`).
-- Always ask for explicit confirmation before pushing a branch or opening/updating a pull request; approval to make a change locally does not authorize these shared, remote actions.
-- For local-only, reversible git operations, present the plan but do not block on a separate confirmation. This covers: staging and committing with files and message already drafted; switching to the base branch on a clean worktree; `git pull --ff-only` on the base branch; `git branch -d` of a feature branch (safe because `-d` refuses unmerged branches); `git fetch --prune`. If a PR is confirmed merged by the hosting CLI and `git branch -d` refuses only because the local commit is not an ancestor of the updated base branch, compare with `git log --cherry <base>...<branch>`; when every remaining commit is marked equivalent (`=`), `git branch -D <branch>` is allowed for that local cleanup. Stop and ask when merge/equivalence is unclear, the worktree is dirty, any other destructive shortcut (e.g. `git reset --hard`) would be used, or the scope of a commit is genuinely ambiguous.
-- Use Conventional Commits for both commit messages and PR titles.
-- Add a brief commit body when the subject alone does not explain the important context, such as why the change exists, what user-facing behavior it adds, or why generated/dogfooding files changed.
-- Write the PR body to match `.github/pull_request_template.md`; `gh pr create --body` bypasses the template, so include its sections yourself. Check (`[x]`) each item when satisfied, or when it does not apply append `— N/A: <reason>`; leave a box unchecked only for outstanding work.
-- After a PR merges, switch back to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs (`git fetch --prune`). The remote branch is auto-deleted on merge.
-- Agentry releases are published manually after the release-prep PR merges; use `publish-release` for tag and hosted-release publication. Pushing tags and creating or publishing GitHub Releases are shared remote actions; ask for explicit confirmation before each one.
-
-## Conventions
-
-- Keep extensions tool-agnostic; encode per-tool specifics only in the generators, not in skill/rule content.
-- Rules are not delivered by plugins (no plugin format has a rules component); they install via `scripts/agentry.py install`. Associate each rule with a plugin via that plugin's `rules` array in `agentry.json`. A rule lives once under `rules/` (organized by topic, not by plugin) and may be referenced by more than one plugin — the association is many-to-many, keyed by the rule's path, so never nest rules inside a single plugin. Every rule must currently be referenced by at least one plugin (that reference is also its install handle); a rule referenced by none is unreachable by the installer. For a repo-wide rule with no natural owner, attach it to the most relevant plugin for now — fully standalone rules would need an additive top-level `rules` declaration and a non-plugin install selector, not added yet.
-- When a reference crosses a plugin boundary, name the other plugin (e.g. "the `agentry-git` plugin").
-- A skill stays self-contained: it must not depend on a rule being installed. When a skill needs a rule's content at hand, embed a generated copy via the plugin's `skillReferences` map (`{ "<skill>": ["<rule path>"] }`); `generate` writes it into the skill's `references/`. The rule stays canonical under `rules/` (and keeps its own `rules`-array association); fence any maintainer-only prose in the rule with the `skill-reference:exclude` markers so it does not leak into the portable copy.
-- Authoring guidance for skills, subagents, commands, rules, and plugins lives in the `agentry-authoring` plugin's skills — consult the matching skill when creating those.
+- Keep extensions tool-agnostic. Put per-tool behavior in generators, not in portable skill, rule, command, or agent content.
+- Rules live once under `rules/`, organized by topic, and are associated to plugins through each plugin's `rules` array in `agentry.json`. Every rule must be referenced by at least one plugin.
+- A rule may be referenced by multiple plugins. Do not nest rules inside a single plugin.
+- When a reference crosses a plugin boundary, name the other plugin, for example `agentry-git`.
+- Skills must be self-contained and must not require a rule to be installed. If a skill needs rule text, embed it through the plugin's `skillReferences` map and regenerate.
