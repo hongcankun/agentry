@@ -114,6 +114,7 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **prepare-release** command: Prepare a project release commit by updating version, generated metadata, and release notes.
 - **publish-release** command: Publish a prepared release by verifying the merged release state, tagging it, and optionally creating hosted release notes.
 - **vcs/conventional-commits** rule: Policy for when the Conventional Commits format applies and what a commit message must satisfy before committing; defers the message format and validation procedure to the `conventional-commits` skill.
+- **vcs/git-workflow** rule: Policy for branch safety, pull request flow, shared remote actions, and merged-branch cleanup; defers the procedure to the `git-workflow` skill.
 
 ### [agentry-authoring](./plugins/agentry-authoring)
 
