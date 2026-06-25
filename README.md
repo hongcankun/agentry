@@ -124,6 +124,10 @@ Each plugin groups related extensions. Sources live under [`plugins/`](./plugins
 - **rule-manager** skill: Create, update, or review agent rules that guide AI agent behavior, at project scope or user/global scope, including defining scope and triggers, writing clear and actionable directives, organizing rule files, and reviewing rules for clarity and conflicts.
 - **prompt-template-manager** skill: Create, update, or review reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation.
 - **plugin-manager** skill: Create, update, or review plugins and plugin marketplaces for AI coding tools like Claude Code and Trae CLI, including defining a plugin's components, writing the manifest, organizing the layout, assembling a marketplace catalog, and reviewing for validity and overlap.
+- **authoring-review** skill: Review AI agent authoring content for accuracy, clarity, consistency, redundancy, verbosity, portability, trigger quality, and cross-artifact alignment.
+- **review-authoring** command: Review skills, commands, rules, subagents, prompt templates, plugin metadata, or related docs for authoring quality and cross-artifact consistency.
+- **authoring-reviewer** agent: Reviews AI agent authoring content for accuracy, clarity, consistency, redundancy, verbosity, portability, trigger quality, and cross-artifact alignment. Use proactively after creating or modifying skills, commands, rules, subagents, prompt templates, plugin metadata, or documentation that describes those extension components.
+- **authoring/authoring-review** rule: Guidance for when to use authoring review on AI agent extension content and related documentation; defers the detailed procedure to the `authoring-review` skill.
 
 ### [agentry-docs](./plugins/agentry-docs)
 
