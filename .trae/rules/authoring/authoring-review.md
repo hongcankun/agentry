@@ -1,0 +1,1 @@
+../../../rules/authoring/authoring-review.md
