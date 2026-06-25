@@ -1152,7 +1152,7 @@ def act_on_plugins_install(args, manifest, plugins, interactive, action_width, s
     ready = mkt in present
     if not ready:
         if orchestrate_confirm(f"{indent()}add marketplace '{mkt}' ({source})?", args, interactive, bulk=bulk):
-            ok, _, err = run_tool_command(binary, ["plugin", "marketplace", "add", source], args.dry_run)
+            ok, _, err = run_tool_command(binary, ["plugin", "marketplace", "add", source], args.dry_run, capture=True)
             if ok:
                 ready = True
                 label = "would add" if args.dry_run else "added"
@@ -1187,7 +1187,7 @@ def act_on_plugins_install(args, manifest, plugins, interactive, action_width, s
             rows.append(plugin_row("skipped", name, action_width, "declined"))
             continue
         # Confirm already passed, so tell trae's install not to prompt again.
-        ok, _, err = run_tool_command(binary, build_install_args(args.tool, ref, assume_yes=True), args.dry_run)
+        ok, _, err = run_tool_command(binary, build_install_args(args.tool, ref, assume_yes=True), args.dry_run, capture=True)
         if ok:
             label = "would install" if args.dry_run else "installed"
             rows.append(plugin_row(label, name, action_width))
@@ -1237,6 +1237,7 @@ def act_on_plugins_uninstall(args, manifest, plugins, interactive, action_width,
             binary,
             ["plugin", "uninstall", name] + removal_confirm_flags(args.tool),
             args.dry_run,
+            capture=True,
         )
         if ok:
             removed.add(name)
@@ -1259,6 +1260,7 @@ def act_on_plugins_uninstall(args, manifest, plugins, interactive, action_width,
             binary,
             ["plugin", "marketplace", "remove", mkt] + removal_confirm_flags(args.tool),
             args.dry_run,
+            capture=True,
         )
         if ok:
             label = "would remove" if args.dry_run else "removed"

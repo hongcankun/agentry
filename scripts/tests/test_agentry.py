@@ -718,6 +718,28 @@ class RunToolCommandTests(unittest.TestCase):
         self.assertEqual(out, "")
         self.assertTrue(err)  # non-empty diagnostic string
 
+    def test_capture_true_passes_capture_output_to_subprocess(self):
+        with mock.patch.object(subprocess, "run", return_value=mock.MagicMock(
+                returncode=0, stdout="out", stderr="err")) as sr:
+            ok, out, err = agentry.run_tool_command("/bin/echo", ["hi"],
+                                                    dry_run=False, capture=True)
+        sr.assert_called_once()
+        self.assertTrue(sr.call_args.kwargs.get("capture_output"))
+        self.assertTrue(ok)
+        self.assertEqual(out, "out")
+        self.assertEqual(err, "err")
+
+    def test_capture_false_does_not_pass_capture_output(self):
+        with mock.patch.object(subprocess, "run", return_value=mock.MagicMock(
+                returncode=0, stdout=None, stderr=None)) as sr:
+            ok, out, err = agentry.run_tool_command("/bin/echo", ["hi"],
+                                                    dry_run=False, capture=False)
+        sr.assert_called_once()
+        self.assertFalse(sr.call_args.kwargs.get("capture_output", False))
+        self.assertTrue(ok)
+        self.assertEqual(out, "")
+        self.assertEqual(err, "")
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -1766,6 +1788,94 @@ class PluginOrchestrationTests(unittest.TestCase):
         self.assertIn("could not verify remaining plugins", text)
 
 
+
+    def test_act_on_plugins_install_passes_capture_true(self):
+        """Marketplace add and plugin install must both capture tool output."""
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = {
+            "name": "test-agentry",
+            "owner": "tester",
+            "repository": "https://example.invalid/t/test-agentry.git",
+            "plugins": [{"name": "a"}],
+        }
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": set(),  # marketplace not present, so add runs
+            "installed": {},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        with mock.patch.object(agentry, "run_tool_command", return_value=(True, "", "")) as run:
+            agentry.act_on_plugins_install(
+                args, manifest, manifest["plugins"],
+                interactive=False, action_width=15, state=snapshot
+            )
+        calls = run.call_args_list
+        self.assertEqual(len(calls), 2)
+        # First call: marketplace add — must have capture=True
+        self.assertTrue(calls[0].kwargs.get("capture"),
+                        f"capture=True missing for {' '.join(calls[0].args[1])}")
+        # Second call: plugin install — must also have capture=True
+        self.assertTrue(calls[1].kwargs.get("capture"),
+                        f"capture=True missing for {' '.join(calls[1].args[1])}")
+
+    def test_act_on_plugins_uninstall_passes_capture_true(self):
+        """Plugin uninstall and marketplace remove must both capture tool output."""
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = self.repo.manifest_dict
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {"a": "marketplace"},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        with mock.patch.object(agentry, "run_tool_command", return_value=(True, "", "")) as run:
+            agentry.act_on_plugins_uninstall(
+                args, manifest, [manifest["plugins"][0]],
+                interactive=False, action_width=15, state=snapshot
+            )
+        calls = run.call_args_list
+        self.assertEqual(len(calls), 2)
+        # First call: plugin uninstall — must have capture=True
+        self.assertTrue(calls[0].kwargs.get("capture"),
+                        f"capture=True missing for {' '.join(calls[0].args[1])}")
+        # Second call: marketplace remove — must have capture=True
+        self.assertTrue(calls[1].kwargs.get("capture"),
+                        f"capture=True missing for {' '.join(calls[1].args[1])}")
+
+    def test_act_on_plugins_install_suppresses_tool_stdout(self):
+        """Tool CLI stdout must not bleed into Agentry's printed output."""
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = self.repo.manifest_dict
+        plugins = [p for p in manifest["plugins"] if p["name"] == "a"]
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": {"test-agentry"},
+            "installed": {},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+
+        def fake_run(binary, cmd_args, dry_run, capture=False):
+            # Simulate a noisy tool that prints to stdout when not captured
+            if not capture:
+                print("TOOL NOISE: installing plugin")
+            return True, "tool stdout line", "tool stderr line"
+
+        buf = io.StringIO()
+        with mock.patch.object(agentry, "run_tool_command", side_effect=fake_run),                 redirect_stdout(buf):
+            unresolved, rows = agentry.act_on_plugins_install(
+                args, manifest, plugins, interactive=False, action_width=15, state=snapshot
+            )
+        output = buf.getvalue()
+        self.assertNotIn("TOOL NOISE", output)
+        self.assertNotIn("tool stdout line", output)
+        # Agentry's own structured rows should still be present when printed
+        for row in rows:
+            print(agentry._strip_color(row), file=buf)
+        self.assertIn("installed", buf.getvalue())
+
 # ---------------------------------------------------------------------------
 # Generation: generate_claude / generate_trae / generate_skill_references
 # ---------------------------------------------------------------------------
@@ -2133,6 +2243,44 @@ class InstallUninstallTests(unittest.TestCase):
         agentry.cmd_install(args_second)
         self.assertEqual(target.stat().st_mtime_ns, mtime_before)
 
+
+
+    def test_cmd_install_marketplace_happy_path_captures_output(self):
+        """End-to-end marketplace install must pass capture=True to every run_tool_command call."""
+        args = _make_namespace(
+            tool="trae", plugin="a", source="marketplace",
+            project_dir=self.project, yes=True, dry_run=True,
+        )
+        call_log = []
+
+        def fake_run(binary, cmd_args, dry_run, capture=False):
+            call_log.append((list(cmd_args), capture))
+            return True, "", ""
+
+        def fake_resolve(tool):
+            return "/bin/fake"
+
+        def fake_query_markets(binary):
+            return True, set()  # marketplace not present
+
+        def fake_query_installed(binary):
+            return True, {}
+
+        # Patch home to a temp dir so even if dry_run didn't prevent writes,
+        # we wouldn't touch the real user home.
+        fake_home = self.tmp / "fakehome"
+        fake_home.mkdir()
+        with mock.patch.object(Path, "home", return_value=fake_home), \
+                mock.patch.object(agentry, "run_tool_command", side_effect=fake_run), \
+                mock.patch.object(agentry, "resolve_tool_binary", side_effect=fake_resolve), \
+                mock.patch.object(agentry, "query_marketplaces", side_effect=fake_query_markets), \
+                mock.patch.object(agentry, "query_installed_plugins", side_effect=fake_query_installed):
+            rv = agentry.cmd_install(args)
+
+        self.assertEqual(rv, 0)
+        # Verify every run_tool_command call used capture=True
+        for cmd_args, capture in call_log:
+            self.assertTrue(capture, f"capture=True missing for {' '.join(cmd_args)}")
 
 # ---------------------------------------------------------------------------
 # main() / argparse wiring: exercise the top-level entry point
