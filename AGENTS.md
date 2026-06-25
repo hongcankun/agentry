@@ -20,13 +20,19 @@ When changing the extensions or plugin set, follow these steps in order:
 2. **Update `agentry.json`.** Reflect any added/removed/renamed component in the relevant plugin's `skills`/`agents`/`commands`/`rules` arrays (and its `skillReferences` map when embedding a rule's content into a skill), and its `description`/`keywords` if scope changed.
 3. **Bump versions.** Follow the Versioning policy in `README.md`. Two levels:
    - Bump the changed plugin's `version` independently (SemVer — patch = fixes, minor = added component, major = removed/renamed/breaking).
-   - Bump the top-level `version` (the **project release version**) to the **most-severe change** in the release — `max()` of every per-plugin bump and any catalog/CLI change, on the same SemVer scale: **patch** when the worst change is only a fix, **minor** when something is added (a plugin's new component, an added plugin, or a new `agentry.py` capability), **major** when something is removed/renamed/breaking (a per-plugin major, a removed/renamed plugin, or a breaking CLI change). Little extra judgment — it rolls up the per-plugin bumps you already chose alongside any catalog/CLI change. Changes with no observable surface (tests, no-op refactors, this `AGENTS.md`, CI) do not bump it.
+   - While a plugin is still `0.x`, breaking changes may use a **minor** bump rather than jumping to `1.0.0`; once a plugin reaches `1.0.0`, breaking changes use **major** bumps.
+   - Do **not** bump the top-level `version` in ordinary change PRs. The top-level **project release version** moves only in explicit release-prep PRs.
 4. **Regenerate packaging.**
    ```bash
    python3 scripts/agentry.py generate
    ```
-5. **Update `README.md`.** Keep the plugin/skill list and any affected sections in sync with the change.
-6. **Validate.**
+5. **Update release notes when needed.** In release-prep PRs, update the generated changelog:
+   ```bash
+   git-cliff --output CHANGELOG.md
+   ```
+   Release-prep commits such as `chore(release): prepare vX.Y.Z` are intentionally excluded from `CHANGELOG.md`; the changelog should describe user-facing plugin/tooling changes, not the metadata commit that packages them.
+6. **Update `README.md`.** Keep the plugin/skill list and any affected sections in sync with the change.
+7. **Validate.**
    - For each new/changed skill, subagent, command, or rule, use the matching `agentry-authoring` skill (`skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, `plugin-manager`); each defines and runs its own validation. Do not reach into a skill's internal scripts directly from here.
    - Confirm the generated packaging is current (CI enforces this on push/PR via `.github/workflows/check.yml`):
      ```bash
@@ -64,7 +70,7 @@ This repo follows a PR-based flow; apply it on top of the `git-workflow` and `co
 - Add a brief commit body when the subject alone does not explain the important context, such as why the change exists, what user-facing behavior it adds, or why generated/dogfooding files changed.
 - Write the PR body to match `.github/pull_request_template.md`; `gh pr create --body` bypasses the template, so include its sections yourself. Check (`[x]`) each item when satisfied, or when it does not apply append `— N/A: <reason>`; leave a box unchecked only for outstanding work.
 - After a PR merges, switch back to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs (`git fetch --prune`). The remote branch is auto-deleted on merge.
-- When a merged release bumped the top-level `version`, tag that commit on `main` with an annotated tag `vX.Y.Z` matching the new top-level `version` (`git tag -a vX.Y.Z -m "..."`). Creating the tag locally is reversible, but pushing it (`git push origin vX.Y.Z`) is a shared, remote action — ask for explicit confirmation first, same as pushing a branch.
+- Agentry releases are published manually after the release-prep PR merges; use `publish-release` for tag and hosted-release publication. Pushing tags and creating or publishing GitHub Releases are shared remote actions; ask for explicit confirmation before each one.
 
 ## Conventions
 

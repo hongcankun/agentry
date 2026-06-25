@@ -13,25 +13,30 @@ Follow the maintenance workflow in [`AGENTS.md`](./AGENTS.md#maintenance-workflo
 
 1. Edit the content under `plugins/<plugin>/` (skills/subagents) or `rules/` (rules).
 2. Update [`agentry.json`](./agentry.json) to reflect any added/removed/renamed component.
-3. Bump versions per the [Versioning policy](./README.md#versioning): the changed plugin's `version` (per-plugin SemVer), and the top-level project release `version` to the most-severe change in the release (`max()` of the per-plugin bumps and any catalog/CLI change).
+3. Bump versions per the [Versioning policy](./README.md#versioning): in ordinary change PRs, bump only the changed plugin's `version` (per-plugin SemVer). The top-level project release `version` is bumped only in release-prep PRs.
 4. Regenerate packaging:
    ```bash
    python3 scripts/agentry.py generate
    ```
-5. Update [`README.md`](./README.md) if the plugin/skill list or any affected section changed.
-6. Validate packaging before opening a PR:
+5. In release-prep PRs, update the generated changelog:
+   ```bash
+   git-cliff --output CHANGELOG.md
+   ```
+   Release-prep commits are excluded from the generated changelog; it should describe the changes being released, not the metadata commit that packages them.
+6. Update [`README.md`](./README.md) if the plugin/skill list or any affected section changed.
+7. Validate packaging before opening a PR:
    ```bash
    python3 scripts/agentry.py generate --check
    ```
    Must pass — `--check` fails if the generated packaging is out of date.
-7. Run the test suite (stdlib `unittest`, no extra dependencies):
+8. Run the test suite (stdlib `unittest`, no extra dependencies):
    ```bash
    python3 -m unittest discover scripts/tests
    ```
 
 ## Proposing a new plugin
 
-A new plugin changes the plugin set: add it to `agentry.json` under `plugins`, create its directory under `plugins/<name>/`, bump the top-level `version` (a **minor** project release bump, or **major** if the same release also removes or renames something), and regenerate. Use the `plugin-manager` skill for the layout and manifest details, and explain the rationale in your PR description.
+A new plugin changes the plugin set: add it to `agentry.json` under `plugins`, create its directory under `plugins/<name>/`, bump that plugin's `version`, and regenerate. The top-level project release `version` is bumped later in a release-prep PR. Use the `plugin-manager` skill for the layout and manifest details, and explain the rationale in your PR description.
 
 ## Commits and pull requests
 

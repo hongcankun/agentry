@@ -13,8 +13,9 @@
 ## Checklist
 
 - [ ] Edited the canonical `agentry.json` (not generated packaging)
-- [ ] Bumped the affected plugin `version`, and the top-level project release `version` per the rollup (README → Versioning)
+- [ ] Bumped the affected plugin `version`; for release-prep PRs, bumped the top-level project release `version` per the rollup (README → Versioning)
 - [ ] Ran `python3 scripts/agentry.py generate` and committed the result
+- [ ] Updated `CHANGELOG.md` with `git-cliff --output CHANGELOG.md` for release-prep PRs
 - [ ] `python3 scripts/agentry.py generate --check` passes
 - [ ] `python3 -m unittest discover scripts/tests` passes
 - [ ] Updated `README.md` if the plugin/skill/rule list changed
