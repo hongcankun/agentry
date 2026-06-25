@@ -1154,6 +1154,7 @@ def act_on_plugins_install(args, manifest, plugins, interactive, action_width, s
         if orchestrate_confirm(f"{indent()}add marketplace '{mkt}' ({source})?", args, interactive, bulk=bulk):
             ok, _, err = run_tool_command(binary, ["plugin", "marketplace", "add", source], args.dry_run)
             if ok:
+                ready = True
                 label = "would add" if args.dry_run else "added"
                 rows.append(plugin_row(label, f"marketplace {mkt}", action_width, source if not args.dry_run else None))
             else:

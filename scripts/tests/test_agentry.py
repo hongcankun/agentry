@@ -1506,6 +1506,49 @@ class PluginOrchestrationTests(unittest.TestCase):
         self.assertIn("marketplace add", joined)
         self.assertIn("plugin install", joined)
 
+    def test_act_on_plugins_install_adds_marketplace_and_installs_plugins_without_snapshot_mutation(self):
+        """Plugins install after marketplace add even when the pre-action snapshot is not mutated.
+
+        This guards against a regression where ``ready`` was never set to ``True``
+        after a successful marketplace add, so the ``mkt not in present`` check
+        (against the unchanged pre-action snapshot) caused all plugins to be
+        skipped with "marketplace not ready".
+        """
+        args = _make_namespace(tool="trae", yes=True, dry_run=False)
+        manifest = {
+            "name": "test-agentry",
+            "owner": "tester",
+            "repository": "https://example.invalid/t/test-agentry.git",
+            "plugins": [{"name": "a"}],
+        }
+        snapshot = {
+            "binary": "/bin/fake",
+            "markets": set(),  # marketplace not added yet
+            "installed": {},
+            "mkt_ok": True,
+            "list_ok": True,
+        }
+        commands = []
+
+        def fake_run(binary, cmd_args, dry_run, capture=False):
+            commands.append(list(cmd_args))
+            # Deliberately do NOT mutate snapshot["markets"] — the real CLI
+            # updates its own state, but our pre-action snapshot is frozen.
+            # The fix must track readiness via the ``ready`` flag, not by
+            # relying on the snapshot being mutated.
+            return True, "", ""
+        with mock.patch.object(agentry, "run_tool_command", side_effect=fake_run):
+            unresolved, rows = agentry.act_on_plugins_install(
+                args, manifest, manifest["plugins"], interactive=False,
+                action_width=15, state=snapshot
+            )
+        self.assertEqual(unresolved, 0)
+        joined = " ".join(" ".join(c) for c in commands)
+        self.assertIn("marketplace add", joined)
+        self.assertIn("plugin install", joined)
+        text = "\n".join(agentry._strip_color(r) for r in rows)
+        self.assertNotIn("marketplace not ready", text)
+
     def test_act_on_plugins_install_declined_marketplace_skips_plugins(self):
         args = _make_namespace(tool="trae", yes=False, dry_run=False)
         manifest = self.repo.manifest_dict
