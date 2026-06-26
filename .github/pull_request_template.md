@@ -8,15 +8,14 @@
 
 ## Notes
 
-<!-- Optional: call out validation caveats, design decisions, runtime checks, known limitations, or follow-up work. Write N/A if there are no notes. -->
+<!-- Optional: call out caveats, design decisions, known limitations, or follow-up work. Write N/A if there are no notes. -->
 
 ## Checklist
 
-- [ ] For extension changes, edited the canonical `agentry.json` (not generated packaging)
-- [ ] For plugin content changes, bumped the affected plugin `version`; for release-prep PRs, bumped the top-level project release `version` per the rollup (README → Versioning)
-- [ ] If manifest or extension changes require generated packaging updates, ran `python3 scripts/agentry.py generate` and committed the result
-- [ ] Updated `CHANGELOG.md` with `git-cliff --output CHANGELOG.md` for release-prep PRs
+<!-- Mark non-applicable items checked and append `- N/A: <reason>`. -->
+
 - [ ] `python3 scripts/agentry.py validate` passes
 - [ ] `python3 -m unittest discover scripts/tests` passes
-- [ ] Updated the top-level `README.md` or relevant plugin `README.md` if user-facing plugins, components, install commands, rules, or workflows changed
-- [ ] Validated new/changed components with the matching `agentry-authoring` skill
+- [ ] For extension changes, canonical sources, `agentry.json`, plugin versions, generated packaging, and matching `agentry-authoring` validation are complete
+- [ ] Updated the top-level `README.md` or relevant plugin `README.md` for user-facing changes
+- [ ] For release-prep PRs, bumped the top-level project release `version` and updated `CHANGELOG.md` with `git-cliff --output CHANGELOG.md`
