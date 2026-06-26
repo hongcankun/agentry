@@ -13,11 +13,14 @@ body = """
 {% else %}\
 ## [Unreleased]
 {% endif %}\
-{% for group, commits in commits | group_by(attribute="group") %}
-### {{ group | striptags | trim | upper_first }}
-{% for commit in commits -%}
+{% set groups = commits | group_by(attribute="group") %}\
+{% for group in ["Breaking Changes", "Features", "Fixes", "Performance", "Security", "Refactoring", "Documentation", "Tests", "Continuous Integration", "Build", "Maintenance", "Style", "Reverts"] %}\
+{% if groups[group] %}
+### {{ group }}
+{% for commit in groups[group] -%}
 - {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{% if commit.breaking %}**Breaking:** {% endif %}{{ commit.message | upper_first }}
 {% endfor %}
+{% endif %}\
 {% endfor %}
 
 """
@@ -36,10 +39,10 @@ commit_parsers = [
     { message = "^fix", group = "Fixes" },
     { message = "^perf", group = "Performance" },
     { message = "^docs?", group = "Documentation" },
-    { message = "^refactor", group = "Refactoring" },
     { message = "^test", group = "Tests" },
     { message = "^ci", group = "Continuous Integration" },
     { message = "^build", group = "Build" },
+    { message = "^refactor", group = "Refactoring" },
     { message = "^chore", group = "Maintenance" },
     { message = "^style", group = "Style" },
     { message = "^revert", group = "Reverts" },

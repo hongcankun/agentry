@@ -25,7 +25,7 @@ Thanks for your interest in contributing. This file is the short human-facing ch
    python3 -m unittest discover scripts/tests
    ```
 
-For release-prep PRs, also update `CHANGELOG.md` with `git-cliff --output CHANGELOG.md`.
+For release-prep PRs, also update `CHANGELOG.md` with `git-cliff --tag vX.Y.Z --output CHANGELOG.md`.
 
 ## Pull Requests
 

@@ -110,7 +110,7 @@ Versions live in [`agentry.json`](./agentry.json) and propagate to generated pac
 | **minor** | something **added** — a plugin's new component (per-plugin **minor**), a plugin **added**, or a new `agentry.py` capability (new flag, channel, or subcommand) |
 | **major** | after `1.0.0`, something **removed, renamed, or breaking** — a plugin's per-plugin **major**, a plugin **removed or renamed**, or a breaking `agentry.py` CLI/behavior change |
 
-Normal change PRs bump only affected per-plugin versions and regenerate packaging. Release-prep PRs bump the top-level project `version`, update [`CHANGELOG.md`](./CHANGELOG.md) with `git-cliff --output CHANGELOG.md`, and regenerate packaging if the manifest changed.
+Normal change PRs bump only affected per-plugin versions and regenerate packaging. Release-prep PRs bump the top-level project `version`, update [`CHANGELOG.md`](./CHANGELOG.md) with `git-cliff --tag vX.Y.Z --output CHANGELOG.md`, and regenerate packaging if the manifest changed.
 
 ## Contributing
 

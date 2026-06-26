@@ -23,7 +23,7 @@ When changing extensions or plugin membership:
 5. Keep user-facing docs in sync:
    - update the top-level `README.md` for catalog-wide install, plugin list, versioning, or workflow changes;
    - update `plugins/<plugin>/README.md` for plugin-specific purpose, install guidance, component table, or workflow changes.
-6. In release-prep PRs only, update `CHANGELOG.md` with `git-cliff --output CHANGELOG.md`.
+6. In release-prep PRs only, update `CHANGELOG.md` with `git-cliff --tag vX.Y.Z --output CHANGELOG.md`.
 7. Validate with:
    ```bash
    python3 scripts/agentry.py validate
