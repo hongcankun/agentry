@@ -50,14 +50,13 @@ Use the dogfooded `conventional-commits` and `git-workflow` skills for git work,
 ## Git Workflow
 
 - Never commit directly to `main`. Land changes through a short-lived branch and pull request.
-- Name branches as `type/short-description`, with a lowercase hyphenated description, and keep the type aligned with the Conventional Commit type.
+- Name branches as `type/short-description`; align the type with the Conventional Commit type.
 - Use Conventional Commits for commit messages and PR titles.
 - Add a brief commit body when the subject alone does not explain important context. Hard-wrap commit body prose at about 72 columns.
 - Always ask for explicit confirmation before pushing, opening a PR, updating a PR, pushing tags, or creating/publishing a GitHub Release.
-- For local-only reversible git operations, state the plan and proceed without a separate confirmation when the scope is clear. This includes staging and committing drafted changes, switching clean branches, `git pull --ff-only` on the base branch, `git branch -d`, and `git fetch --prune`.
-- Stop and ask before destructive commands, unclear merge cleanup, dirty-worktree branch switches, ambiguous commit scope, or any `git reset --hard` style shortcut.
-- After a PR merges, switch to `main`, fast-forward it, delete the local feature branch, and prune stale remote-tracking refs. If squash-merge cleanup needs `git branch -D`, first confirm patch equivalence with `git log --cherry <base>...<branch>`.
-- Write PR bodies from `.github/pull_request_template.md`. Do not hard-wrap PR body paragraphs; let the hosting UI soft-wrap them. When a checklist item does not apply, mark it checked and append `- N/A: <reason>`.
+- For clear local-only reversible git operations, state the plan and proceed without confirmation. Examples: staging, committing drafted changes, creating a branch for current work with `git switch -c`, switching clean branches, `git pull --ff-only`, `git branch -d`, and `git fetch --prune`.
+- Stop and ask before destructive commands, switching a dirty worktree away from current work, unclear merge cleanup, ambiguous commit scope, or any `git reset --hard` style shortcut.
+- Write PR bodies from `.github/pull_request_template.md`. Do not hard-wrap PR body paragraphs; let the hosting UI soft-wrap them.
 
 ## Authoring Conventions
 
