@@ -18,10 +18,10 @@ Thanks for your interest in contributing. This file is the short human-facing ch
    ```bash
    python3 scripts/agentry.py generate
    ```
-5. Update `README.md` when user-facing commands, plugins, skills, rules, or workflows change.
+5. Update the top-level `README.md` or relevant plugin `README.md` when user-facing commands, plugins, skills, rules, or workflows change.
 6. Validate before opening a PR:
    ```bash
-   python3 scripts/agentry.py generate --check
+   python3 scripts/agentry.py validate
    python3 -m unittest discover scripts/tests
    ```
 

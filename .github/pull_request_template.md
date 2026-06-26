@@ -12,11 +12,11 @@
 
 ## Checklist
 
-- [ ] Edited the canonical `agentry.json` (not generated packaging)
-- [ ] Bumped the affected plugin `version`; for release-prep PRs, bumped the top-level project release `version` per the rollup (README → Versioning)
-- [ ] Ran `python3 scripts/agentry.py generate` and committed the result
+- [ ] For extension changes, edited the canonical `agentry.json` (not generated packaging)
+- [ ] For plugin content changes, bumped the affected plugin `version`; for release-prep PRs, bumped the top-level project release `version` per the rollup (README → Versioning)
+- [ ] If manifest or extension changes require generated packaging updates, ran `python3 scripts/agentry.py generate` and committed the result
 - [ ] Updated `CHANGELOG.md` with `git-cliff --output CHANGELOG.md` for release-prep PRs
-- [ ] `python3 scripts/agentry.py generate --check` passes
+- [ ] `python3 scripts/agentry.py validate` passes
 - [ ] `python3 -m unittest discover scripts/tests` passes
-- [ ] Updated `README.md` if the plugin/skill/rule list changed
+- [ ] Updated the top-level `README.md` or relevant plugin `README.md` if user-facing plugins, components, install commands, rules, or workflows changed
 - [ ] Validated new/changed components with the matching `agentry-authoring` skill

@@ -20,13 +20,17 @@ When changing extensions or plugin membership:
 2. Update `agentry.json` for added, removed, or renamed components, plugin metadata, rules associations, `skillReferences`, and the changed plugin's SemVer `version`.
 3. Do not bump the top-level project release `version` in ordinary change PRs. Bump it only in explicit release-prep PRs, following `README.md#versioning`.
 4. Regenerate packaging with `python3 scripts/agentry.py generate`.
-5. Keep `README.md` in sync when user-facing plugin, skill, command, rule, or workflow documentation changes.
+5. Keep user-facing docs in sync:
+   - update the top-level `README.md` for catalog-wide install, plugin list, versioning, or workflow changes;
+   - update `plugins/<plugin>/README.md` for plugin-specific purpose, install guidance, component table, or workflow changes.
 6. In release-prep PRs only, update `CHANGELOG.md` with `git-cliff --output CHANGELOG.md`.
 7. Validate with:
    ```bash
-   python3 scripts/agentry.py generate --check
+   python3 scripts/agentry.py validate
    python3 -m unittest discover scripts/tests
    ```
+
+Plugin README files should stay concise: purpose, when to install, component table, and install commands that distinguish direct marketplace installs from `scripts/agentry.py`.
 
 For each new or changed extension artifact, use the matching `agentry-authoring` skill (`skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, or `plugin-manager`) and follow that skill's validation. Do not call a skill's private helper scripts directly from here.
 
