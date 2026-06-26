@@ -80,59 +80,89 @@ Common flags (any omitted selection is prompted interactively, or takes the note
 
 ## Plugins
 
-Each plugin groups related extensions. Sources live under [`plugins/`](./plugins) (skills, subagents, and commands) and [`rules/`](./rules).
+Agentry currently ships **5 plugins** with **37 components**: 14 skills, 4 subagents, 12 commands, and 7 rules. Each plugin groups related extensions. Sources live under [`plugins/`](./plugins) (skills, subagents, and commands) and [`rules/`](./rules).
 
-### [agentry-code-quality](./plugins/agentry-code-quality)
+| Plugin | Version | Best for | Skills | Agents | Commands | Rules |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| [`agentry-code-quality`](./plugins/agentry-code-quality) | 0.10.5 | Code review, test design, test repair, review publishing, and pre-merge quality gates. | 3 | 2 | 4 | 3 |
+| [`agentry-security`](./plugins/agentry-security) | 0.4.0 | Threat-driven audits for auth, user input, file/network access, crypto, secrets, payments, and other sensitive code. | 1 | 1 | 1 | 1 |
+| [`agentry-git`](./plugins/agentry-git) | 0.6.1 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
+| [`agentry-authoring`](./plugins/agentry-authoring) | 0.4.0 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
+| [`agentry-docs`](./plugins/agentry-docs) | 0.2.0 | README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
 
-- **code-review** skill: Review code changes for correctness, readability, security, performance, and maintainability, then deliver prioritized, actionable feedback. Use when a user asks to review a diff, pull request, commit, branch, or file, or wants feedback on code they wrote or modified.
-- **test-engineering** skill: Write, update, debug, and review automated test code by identifying behavior to cover, matching the project's test framework and style, adding focused assertions or fixtures, and validating the result. Use when the user asks to add tests, improve coverage, fix failing tests, review test code, or design a testing plan.
-- **review-publishing** skill: Draft and publish existing review findings to PRs, MRs, or code review surfaces by mapping findings to inline or summary comments, deduplicating noise, and requiring explicit approval for remote mutations. Use when the user asks to publish, post, draft, or prepare review comments from existing findings.
-- **review-code** command: Review local changes, a branch, commit range, pull request, merge request, diff, or file for code-quality issues.
-- **improve-tests** command: Add, update, debug, review, or plan automated tests using the `test-engineering` skill.
-- **quality-gate** command: Run a combined pre-merge gate covering code quality, security risk, and test adequacy.
-- **publish-review** command: Publish existing review findings to a PR, MR, or code review surface after explicit approval.
-- **code-reviewer** agent: Reviews code changes for correctness, security, readability, performance, and maintainability, then returns prioritized, actionable feedback. Use proactively after writing or modifying code, or when reviewing a diff, pull request, merge request, commit, branch, or file.
-- **test-engineer** agent: Writes, updates, debugs, and reviews automated tests using the `test-engineering` skill. Use proactively for test coverage, failing or flaky tests, test-quality review, and code changes that need meaningful test coverage.
-- **code-quality/code-review** rule: Policy for when code review is required, the gates a change must pass before merging, and approval criteria; defers the review procedure to the `code-review` skill.
-- **code-quality/code-style** rule: Code style conventions covering core principles, formatting, naming, structure, language idioms, error handling, and comments that code should follow.
-- **code-quality/testing** rule: Testing policy for adding or changing behavior, including meaningful coverage, determinism, and parallel safety.
+Use `scripts/agentry.py inventory --details` to print the same component counts and membership from the canonical manifest.
 
-### [agentry-security](./plugins/agentry-security)
+### Choosing Plugins
 
-- **security-audit** skill: Perform a focused security audit of code or a codebase — map the attack surface and trust boundaries, hunt for vulnerability classes (injection, auth flaws, SSRF, secrets, weak crypto, and more), rate each finding by likelihood and impact, and report exploit scenarios with concrete remediations. Use when a user asks for a security review, security audit, threat assessment, or vulnerability hunt of code they own or are authorized to test.
-- **audit-security** command: Run a focused security audit of a repository, feature, boundary, or vulnerability class.
-- **security-auditor** agent: Runs a threat-driven security audit in an isolated context, following the `security-audit` skill. Use proactively when a change touches security-sensitive code (auth, user input, queries, file/network access, cryptography, secrets, payments), or when asked for a security audit, threat assessment, or vulnerability hunt.
-- **security/security-audit** rule: Policy for when a security audit is required, the gates a change must pass before merging, and approval criteria; defers the audit procedure to the `security-audit` skill.
+- Install [`agentry-code-quality`](./plugins/agentry-code-quality) for everyday engineering review work: review a diff, improve tests, run a quality gate, or publish review findings.
+- Install [`agentry-security`](./plugins/agentry-security) when agents need a dedicated security audit workflow and a proactive security-auditor subagent.
+- Install [`agentry-git`](./plugins/agentry-git) when agents should help with local commits, pull requests, merged-branch cleanup, and release publishing.
+- Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching manager skills plus cross-artifact review.
+- Install [`agentry-docs`](./plugins/agentry-docs) when the main need is README maintenance without the broader authoring toolkit.
 
-### [agentry-git](./plugins/agentry-git)
+### Component Types
 
-- **git-workflow** skill: Apply git workflow best practices, including choosing a branching strategy, writing commits and pull requests, performing merges and rebases safely, resolving conflicts, and managing releases and tags.
-- **conventional-commits** skill: Create commits that follow the Conventional Commits specification, including selecting appropriate types, writing clear descriptions, and validating commit messages.
-- **prepare-commit** command: Inspect repository changes, stage a focused change set, and create a local Conventional Commit on an appropriate branch.
-- **prepare-pr** command: Inspect branch state and draft or create a pull request with a Conventional Commit title after confirmation.
-- **finish-pr** command: Clean up after a merged pull request by updating the base branch and deleting the local feature branch after confirmation.
-- **prepare-release** command: Prepare a project release commit by updating version, generated metadata, and release notes.
-- **publish-release** command: Publish a prepared release by verifying the merged release state, tagging it, and optionally creating hosted release notes.
-- **vcs/conventional-commits** rule: Policy for when the Conventional Commits format applies and what a commit message must satisfy before committing; defers the message format and validation procedure to the `conventional-commits` skill.
-- **vcs/git-workflow** rule: Policy for branch safety, pull request flow, shared remote actions, and merged-branch cleanup; defers the procedure to the `git-workflow` skill.
+- **Skills** are reusable procedures that agents load when a task matches their description.
+- **Subagents** are specialist agent profiles that can review or execute bounded work in a focused context.
+- **Commands** are slash-command workflows that package a repeatable agent task behind a short command name.
+- **Rules** are policy guidance copied into the target tool's rule directories by the install script; plugin formats themselves do not ship rules.
 
-### [agentry-authoring](./plugins/agentry-authoring)
+### Plugin Inventory
 
-- **skill-manager** skill: Create, update, or review Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package.
-- **subagent-manager** skill: Create, update, or review AI subagents across tools like Claude Code, Cursor, OpenCode, Trae CLI, and Codex, including defining the agent's role and trigger conditions, writing a focused system prompt, scoping tools and model, choosing the right scope, and reviewing agents for clarity and overlap.
-- **command-manager** skill: Create, update, or review AI agent commands across tools like Claude Code, Trae CLI, Cursor, and Codex, including defining command purpose, arguments, prompt body, file placement, metadata, and validation.
-- **rule-manager** skill: Create, update, or review agent rules that guide AI agent behavior, at project scope or user/global scope, including defining scope and triggers, writing clear and actionable directives, organizing rule files, and reviewing rules for clarity and conflicts.
-- **prompt-template-manager** skill: Create, update, or review reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation.
-- **plugin-manager** skill: Create, update, or review plugins and plugin marketplaces for AI coding tools like Claude Code and Trae CLI, including defining a plugin's components, writing the manifest, organizing the layout, assembling a marketplace catalog, and reviewing for validity and overlap.
-- **authoring-review** skill: Review AI agent authoring content for accuracy, clarity, consistency, redundancy, verbosity, portability, trigger quality, and cross-artifact alignment.
-- **review-authoring** command: Review skills, commands, rules, subagents, prompt templates, plugin metadata, or related docs for authoring quality and cross-artifact consistency.
-- **authoring-reviewer** agent: Reviews AI agent authoring content for accuracy, clarity, consistency, redundancy, verbosity, portability, trigger quality, and cross-artifact alignment. Use proactively after creating or modifying skills, commands, rules, subagents, prompt templates, plugin metadata, or documentation that describes those extension components.
-- **authoring/authoring-review** rule: Guidance for when to use authoring review on AI agent extension content and related documentation; defers the detailed procedure to the `authoring-review` skill.
+#### [`agentry-code-quality`](./plugins/agentry-code-quality)
 
-### [agentry-docs](./plugins/agentry-docs)
+Code review and test-engineering skills, slash commands, and specialist subagents that catch correctness, security, maintainability, and test-quality issues with actionable guidance.
 
-- **readme-manager** skill: Create or update README.md files in git repositories, including analyzing the repo structure, identifying key information, and following standard README conventions.
-- **update-readme** command: Create or update a repository README with accurate setup, usage, contribution, and license details.
+| Type | Components |
+| --- | --- |
+| Skills | [`code-review`](./plugins/agentry-code-quality/skills/code-review/SKILL.md), [`test-engineering`](./plugins/agentry-code-quality/skills/test-engineering/SKILL.md), [`review-publishing`](./plugins/agentry-code-quality/skills/review-publishing/SKILL.md) |
+| Subagents | [`code-reviewer`](./plugins/agentry-code-quality/agents/code-reviewer.md), [`test-engineer`](./plugins/agentry-code-quality/agents/test-engineer.md) |
+| Commands | [`review-code`](./plugins/agentry-code-quality/commands/review-code.md), [`improve-tests`](./plugins/agentry-code-quality/commands/improve-tests.md), [`quality-gate`](./plugins/agentry-code-quality/commands/quality-gate.md), [`publish-review`](./plugins/agentry-code-quality/commands/publish-review.md) |
+| Rules | [`code-quality/code-review`](./rules/code-quality/code-review.md), [`code-quality/code-style`](./rules/code-quality/code-style.md), [`code-quality/testing`](./rules/code-quality/testing.md) |
+
+#### [`agentry-security`](./plugins/agentry-security)
+
+Security audit skill that runs a threat-driven review of code: maps the attack surface and trust boundaries, hunts vulnerability classes, rates findings by likelihood and impact, and reports exploit scenarios with concrete remediations.
+
+| Type | Components |
+| --- | --- |
+| Skills | [`security-audit`](./plugins/agentry-security/skills/security-audit/SKILL.md) |
+| Subagents | [`security-auditor`](./plugins/agentry-security/agents/security-auditor.md) |
+| Commands | [`audit-security`](./plugins/agentry-security/commands/audit-security.md) |
+| Rules | [`security/security-audit`](./rules/security/security-audit.md) |
+
+#### [`agentry-git`](./plugins/agentry-git)
+
+Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.
+
+| Type | Components |
+| --- | --- |
+| Skills | [`git-workflow`](./plugins/agentry-git/skills/git-workflow/SKILL.md), [`conventional-commits`](./plugins/agentry-git/skills/conventional-commits/SKILL.md) |
+| Subagents | None |
+| Commands | [`prepare-commit`](./plugins/agentry-git/commands/prepare-commit.md), [`prepare-pr`](./plugins/agentry-git/commands/prepare-pr.md), [`finish-pr`](./plugins/agentry-git/commands/finish-pr.md), [`prepare-release`](./plugins/agentry-git/commands/prepare-release.md), [`publish-release`](./plugins/agentry-git/commands/publish-release.md) |
+| Rules | [`vcs/conventional-commits`](./rules/vcs/conventional-commits.md), [`vcs/git-workflow`](./rules/vcs/git-workflow.md) |
+
+#### [`agentry-authoring`](./plugins/agentry-authoring)
+
+Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins or marketplaces that follow open agent conventions.
+
+| Type | Components |
+| --- | --- |
+| Skills | [`skill-manager`](./plugins/agentry-authoring/skills/skill-manager/SKILL.md), [`subagent-manager`](./plugins/agentry-authoring/skills/subagent-manager/SKILL.md), [`command-manager`](./plugins/agentry-authoring/skills/command-manager/SKILL.md), [`rule-manager`](./plugins/agentry-authoring/skills/rule-manager/SKILL.md), [`prompt-template-manager`](./plugins/agentry-authoring/skills/prompt-template-manager/SKILL.md), [`plugin-manager`](./plugins/agentry-authoring/skills/plugin-manager/SKILL.md), [`authoring-review`](./plugins/agentry-authoring/skills/authoring-review/SKILL.md) |
+| Subagents | [`authoring-reviewer`](./plugins/agentry-authoring/agents/authoring-reviewer.md) |
+| Commands | [`review-authoring`](./plugins/agentry-authoring/commands/review-authoring.md) |
+| Rules | [`authoring/authoring-review`](./rules/authoring/authoring-review.md) |
+
+#### [`agentry-docs`](./plugins/agentry-docs)
+
+Documentation authoring skills for software projects, starting with creating and maintaining README files following standard conventions.
+
+| Type | Components |
+| --- | --- |
+| Skills | [`readme-manager`](./plugins/agentry-docs/skills/readme-manager/SKILL.md) |
+| Subagents | None |
+| Commands | [`update-readme`](./plugins/agentry-docs/commands/update-readme.md) |
+| Rules | None |
 
 ## Contributing
 
