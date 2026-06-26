@@ -655,6 +655,9 @@ class ArgparseTests(unittest.TestCase):
         p_gen.add_argument("--check", action="store_true")
         add_color_arg(p_gen)
 
+        p_validate = sub.add_parser("validate")
+        add_color_arg(p_validate)
+
         return parser
 
     def test_generate_parses_target_and_check_flag(self):
@@ -666,6 +669,10 @@ class ArgparseTests(unittest.TestCase):
     def test_generate_default_target_is_all(self):
         args = self._parser().parse_args(["generate"])
         self.assertEqual(args.target, "all")
+
+    def test_validate_parses(self):
+        args = self._parser().parse_args(["validate"])
+        self.assertEqual(args.command, "validate")
 
     def test_install_parses_tool_and_global(self):
         args = self._parser().parse_args(["install", "--tool", "trae", "--global"])
@@ -1976,6 +1983,19 @@ class GenerationRoundTripTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             agentry.generate_skill_references(manifest, check=False, changed=[])
 
+    def test_check_plugin_readmes_reports_missing_manifest_plugin_readmes(self):
+        changed = []
+        agentry.check_plugin_readmes(self.repo.manifest_dict, changed)
+        self.assertEqual(changed, ["plugins/a/README.md", "plugins/b/README.md"])
+
+    def test_check_plugin_readmes_accepts_existing_manifest_plugin_readmes(self):
+        for plugin in self.repo.manifest_dict["plugins"]:
+            readme = self.repo.plugins_dir / plugin["name"] / "README.md"
+            readme.write_text(f"# {plugin['name']}\n", encoding="utf-8")
+        changed = []
+        agentry.check_plugin_readmes(self.repo.manifest_dict, changed)
+        self.assertEqual(changed, [])
+
     def test_cmd_generate_runs_end_to_end(self):
         ns = _make_namespace(target="all", check=False)
         # cmd_generate reads MANIFEST and writes files relative to REPO_ROOT.
@@ -2300,7 +2320,7 @@ class MainTests(unittest.TestCase):
         self.project = self.tmp / "project"
         self.project.mkdir()
         self._patcher = mock.patch("builtins.print")
-        self._patcher.start()
+        self.print_mock = self._patcher.start()
         self._orig_argv = sys.argv[:]
 
     def tearDown(self):
@@ -2327,6 +2347,30 @@ class MainTests(unittest.TestCase):
         target = self.tmp / ".claude-plugin" / "marketplace.json"
         target.write_text("DRIFTED", encoding="utf-8")
         self.assertEqual(self._main("generate", "--check"), 1)
+
+    def test_main_generate_check_ignores_plugin_readmes(self):
+        self._main("generate")
+        self.print_mock.reset_mock()
+        self.assertEqual(self._main("generate", "--check"), 0)
+        out = "\n".join(str(call.args[0]) for call in self.print_mock.call_args_list if call.args)
+        self.assertIn("packaging is up to date", out)
+        self.assertNotIn("Missing required plugin README files", out)
+
+    def test_main_validate_requires_plugin_readmes(self):
+        self._main("generate")
+        self.print_mock.reset_mock()
+        self.assertEqual(self._main("validate"), 1)
+        out = "\n".join(str(call.args[0]) for call in self.print_mock.call_args_list if call.args)
+        self.assertIn("Missing required plugin README files", out)
+        self.assertIn("plugins/a/README.md", out)
+        self.assertNotIn("Out of date (run", out)
+        for plugin in self.repo.manifest_dict["plugins"]:
+            readme = self.repo.plugins_dir / plugin["name"] / "README.md"
+            readme.write_text(f"# {plugin['name']}\n", encoding="utf-8")
+        self.print_mock.reset_mock()
+        self.assertEqual(self._main("validate"), 0)
+        out = "\n".join(str(call.args[0]) for call in self.print_mock.call_args_list if call.args)
+        self.assertIn("Repository validation passed.", out)
 
     def test_main_install_and_uninstall_checkout_default_flow(self):
         self.assertEqual(self._main(
@@ -2638,6 +2682,3 @@ class DownstreamSeamTests(unittest.TestCase):
             json.loads((self.tmp / ".trae-plugin" / "marketplace.json").read_text(encoding="utf-8"))["$generated"],
             "GENERATED from downstream.json by 'scripts/agentry.py generate trae'. Do not edit by hand.",
         )
-
-
-

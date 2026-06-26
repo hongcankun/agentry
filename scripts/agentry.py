@@ -12,6 +12,7 @@ Subcommands:
 - ``uninstall`` — remove components this tool installed (owned copies/links).
 - ``inventory`` — report manifest plugins, versions, and component membership.
 - ``generate``  — regenerate Claude Code and/or Trae packaging from the manifest.
+- ``validate``  — run repository consistency checks.
 
 Delivery channels. Neither tool's plugin format has a "rules" component, so
 rules are never delivered by a marketplace install; ``install`` always copies
@@ -65,9 +66,10 @@ Examples:
     python3 scripts/agentry.py inventory
     python3 scripts/agentry.py inventory --plugin agentry-code-quality --component skills --paths
 
-    # Regenerate packaging (or verify it in CI)
+    # Regenerate packaging, verify generated files, or run all consistency checks
     python3 scripts/agentry.py generate
     python3 scripts/agentry.py generate --check
+    python3 scripts/agentry.py validate
 """
 
 import argparse
@@ -1958,20 +1960,44 @@ def generate_skill_references(manifest, check, changed):
                 write_or_check(dest, build_skill_reference(rule_rel), check, changed)
 
 
+def check_plugin_readmes(manifest, missing):
+    """Require each declared plugin to have a root README.md."""
+    for plugin in manifest["plugins"]:
+        plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
+        readme = PLUGINS_DIR / plugin_name / "README.md"
+        if not readme.is_file():
+            missing.append(str(readme.relative_to(REPO_ROOT)))
+
+
+def check_generated_packaging(manifest, targets):
+    """Return generated files that differ from the manifest-derived output."""
+    changed = []
+    for tool in targets:
+        if tool == "claude":
+            generate_claude(manifest, check=True, changed=changed)
+        else:
+            generate_trae(manifest, check=True, changed=changed)
+    generate_skill_references(manifest, check=True, changed=changed)
+    return changed
+
+
 def cmd_generate(args):
     """generate: regenerate Claude Code and/or Trae packaging from the manifest."""
     resolve_colors(args.color)
     manifest = load_manifest()
     targets = ("claude", "trae") if args.target == "all" else (args.target,)
     changed = []
-    for tool in targets:
-        if tool == "claude":
-            generate_claude(manifest, args.check, changed)
-        else:
-            generate_trae(manifest, args.check, changed)
-    # Derived skill references are tool-agnostic (identical content for every
-    # tool), so generate them once regardless of the selected target.
-    generate_skill_references(manifest, args.check, changed)
+    if args.check:
+        changed = check_generated_packaging(manifest, targets)
+    else:
+        for tool in targets:
+            if tool == "claude":
+                generate_claude(manifest, check=False, changed=changed)
+            else:
+                generate_trae(manifest, check=False, changed=changed)
+        # Derived skill references are tool-agnostic (identical content for
+        # every tool), so generate them once regardless of the selected target.
+        generate_skill_references(manifest, check=False, changed=changed)
 
     label = " + ".join(targets) if args.target == "all" else args.target
     if args.check:
@@ -1983,6 +2009,29 @@ def cmd_generate(args):
         print(f"{label} packaging is up to date.")
     elif not changed:
         print("Already up to date.")
+    return 0
+
+
+def cmd_validate(args):
+    """validate: run repository consistency checks."""
+    resolve_colors(args.color)
+    manifest = load_manifest()
+    targets = ("claude", "trae")
+    changed = check_generated_packaging(manifest, targets)
+    missing = []
+    check_plugin_readmes(manifest, missing)
+
+    if changed or missing:
+        if changed:
+            print(f"Out of date (run '{cli_name()} generate'):")
+            for path in changed:
+                print(f"  {path}")
+        if missing:
+            print("Missing required plugin README files (author these manually):")
+            for path in missing:
+                print(f"  {path}")
+        return 1
+    print("Repository validation passed.")
     return 0
 
 
@@ -2153,6 +2202,11 @@ def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog
     )
     add_color_arg(p_generate)
     p_generate.set_defaults(func=cmd_generate)
+
+    validate_help = "Run repository consistency checks."
+    p_validate = sub.add_parser("validate", help=validate_help, description=validate_help)
+    add_color_arg(p_validate)
+    p_validate.set_defaults(func=cmd_validate)
 
     args = parser.parse_args(argv)
     if args.command is None:
