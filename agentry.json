@@ -2,7 +2,7 @@
   "$comment": "Canonical, tool-agnostic source of truth for Agentry's extensions and how they group into plugins. Per-tool packaging (e.g. .claude-plugin/, .trae-plugin/) and derived skill references (a plugin's skillReferences embeds a copy of a canonical rule into a skill's references/) are GENERATED from this file by 'scripts/agentry.py generate', and 'scripts/agentry.py install' installs components into a tool's directories from here. Edit this file, not the generated artifacts.",
   "name": "agentry",
   "description": "A collection of reusable extensions for AI coding agents, grouped into plugins.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "owner": {
     "name": "hongcankun"
   },
