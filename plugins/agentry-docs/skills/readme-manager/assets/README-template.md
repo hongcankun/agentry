@@ -1,35 +1,37 @@
 # Project Name
 
-Brief description of what this project does and why it exists.
+Briefly describe what this project does, who it is for, and why it exists.
 
 ## Features
 
-- Feature 1
-- Feature 2
-- Feature 3
+- Capability supported by the repository
+- Another user-visible capability
+- Important integration, workflow, or constraint
+
+## Requirements
+
+- Runtime or toolchain requirement
+- Account, service, or credential requirement if applicable
 
 ## Installation
 
-```bash
-# Example installation steps
-npm install
-# or
-pip install -r requirements.txt
-```
+Describe the shortest reliable setup path for the common user.
 
 ## Usage
 
 ```bash
-# Example usage
-npm start
-# or
-python main.py
+# Replace with a verified command or a clearly marked example.
+project-command --help
 ```
+
+## Development
+
+Include contributor setup, validation commands, or links to contributor docs when applicable.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Describe the contribution workflow or link to the contributor guide.
 
 ## License
 
-This project is licensed under the [License Name] - see the LICENSE file for details.
+This project is licensed under [License Name]. See [LICENSE](./LICENSE) for details.

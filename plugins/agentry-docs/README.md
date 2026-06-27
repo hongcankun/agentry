@@ -1,12 +1,13 @@
 # agentry-docs
 
-Documentation authoring skills for software projects, starting with creating and maintaining README files following standard conventions.
+Lightweight documentation authoring for software repositories, currently focused on accurate README creation and maintenance.
 
 ## When To Install
 
 - Create a new project README.
 - Refresh or simplify an existing README.
 - Keep repository documentation clear and aligned with project structure.
+- Install only README-focused documentation help without the broader extension-authoring toolkit.
 
 ## Components
 

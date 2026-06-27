@@ -64,7 +64,7 @@ Agentry currently ships **5 plugins** with **39 components**: 15 skills, 4 subag
 | [`agentry-security`](./plugins/agentry-security) | 0.4.0 | Threat-driven audits for auth, user input, file/network access, crypto, secrets, payments, and other sensitive code. | 1 | 1 | 1 | 1 |
 | [`agentry-git`](./plugins/agentry-git) | 0.6.3 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
 | [`agentry-authoring`](./plugins/agentry-authoring) | 0.4.0 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
-| [`agentry-docs`](./plugins/agentry-docs) | 0.2.0 | README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
+| [`agentry-docs`](./plugins/agentry-docs) | 0.2.1 | Accurate README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
 
 ### Choosing Plugins
 
