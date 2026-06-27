@@ -1,19 +1,21 @@
 # Published Comment Format
 
-Use these agnostic defaults for review comment bodies. Adapt labels naturally while preserving the structure.
+Use these defaults for review comment bodies. Adapt the comment content to the review surface while preserving the exact label text, emoji-label pairings, field order, and structure.
+
+For review surfaces with rich Markdown rendering, use the fixed emoji-label map below. The emoji are part of the presentation contract: keep the exact emoji and label pairings, keep labels readable without the emoji, do not invent alternate icons, and do not add emoji to `_Source:`.
 
 ## Inline Comments
 
 Use inline comments for actionable findings that map confidently to a changed location, diff position, file, object, or component.
 
 ```markdown
-**Problem [Level]:** <concrete issue tied to this location>
+**⚠️ Problem [Level]:** <concrete issue tied to this location>
 
-**Impact:** <why it matters>
+**📌 Impact:** <why it matters>
 
-**Notes:** <optional evidence, constraint, affected scenario, recurrence, shortened log, or platform caveat>
+**📝 Notes:** <optional evidence, constraint, affected scenario, recurrence, shortened log, or platform caveat>
 
-**Suggested fix:** <specific change, remediation, or test/assertion to add>
+**🛠️ Suggested fix:** <specific change, remediation, or test/assertion to add>
 
 _Source: <review workflow or finding source>._
 ```
@@ -21,7 +23,7 @@ _Source: <review workflow or finding source>._
 Rules:
 
 - Use `Critical`, `High`, `Medium`, `Low`, `Nit`, or `Info` in `Problem [Level]` when the source finding has a reliable level.
-- If no reliable level exists, use `**Problem:**` without a level. Do not invent or inflate levels while formatting the comment.
+- If no reliable level exists, use `**⚠️ Problem:**` without a level. Do not invent or inflate levels while formatting the comment.
 - Anchor the comment to the earliest changed line that makes the finding understandable and actionable, usually the condition, assignment, call, declaration, or first statement that introduces the issue. Use a block's closing line, final statement, broad range end, or last line only when that exact line is the actionable defect.
 - Omit `Notes` when it adds no useful signal. Use it only for evidence needed to act on the finding, such as constraints, affected scenarios, recurrence, shortened logs, validation details, platform caveats, or concise additional affected locations.
 - Keep one inline comment focused on one actionable location-tied finding.
@@ -33,22 +35,22 @@ Rules:
 Use summary comments for overall verdicts, change context, reviewer-run validation, track coverage, residual risk, and findings that cannot be mapped to a stable inline location.
 
 ```markdown
-**Verdict:** <pass | pass with warnings | request changes | block | informational>
+**🎯 Verdict:** <pass | pass with warnings | request changes | block | informational>
 
-**Change summary:** <brief summary in own words>
+**🧾 Change summary:** <brief summary in own words>
 
-**Findings:** <severity counts plus high-level categories only; do not repeat individual inline findings>
+**🔎 Findings:** <severity counts plus high-level categories only; do not repeat individual inline findings>
 
-**Coverage:**
+**📍 Coverage:**
 - Code quality: <covered / skipped / degraded + key note>
 - Security: <covered / skipped / degraded + key note>
 - Tests: <covered / skipped / degraded + key note>
 
-**Validation:** <reviewer-run checks passed, failed, skipped, or blocked>
+**🧪 Validation:** <reviewer-run checks passed, failed, skipped, or blocked>
 
-**Notes:** <optional non-duplicative context, constraints, links, known limitations, or caveats>
+**📝 Notes:** <optional non-duplicative context, constraints, links, known limitations, or caveats>
 
-**Remaining risk:** <material residual risk or manual follow-up only>
+**⚠️ Remaining risk:** <material residual risk or manual follow-up only>
 
 _Source: <review workflow or finding source>; reviewed=<version or patchset>; head=<branch>@<short SHA>; base=<branch>@<short SHA>._
 ```
@@ -66,9 +68,26 @@ Rules:
 - Omit unavailable metadata fields instead of inventing placeholders.
 - Keep platform actions, URLs, comment ids, review ids, and status bookkeeping out of summary comment bodies.
 
+## Emoji Map
+
+Use this exact map for published comments:
+
+- `⚠️ Problem`: issue or caution; neutral across severity levels.
+- `📌 Impact`: why the finding matters.
+- `📝 Notes`: supporting evidence, constraints, or caveats.
+- `🛠️ Suggested fix`: remediation or test action.
+- `🎯 Verdict`: overall review decision; neutral for pass, warning, request changes, or block.
+- `🧾 Change summary`: concise change context.
+- `🔎 Findings`: review results and severity counts.
+- `📍 Coverage`: tracks or scope reviewed.
+- `🧪 Validation`: reviewer-run checks.
+- `⚠️ Remaining risk`: residual caution or follow-up.
+
+Avoid decorative or emotionally loaded emoji such as `🚨`, `💥`, `🔥`, `✨`, or `💡`. Do not add horizontal rules or separator lines above `_Source:`.
+
 ## Final Check
 
 Before returning or sending comments, confirm:
-- inline comments use the inline template and normalized levels;
-- summary comments use the summary template and do not repeat inline findings;
+- inline comments use the inline template, fixed emoji-label map, and normalized levels;
+- summary comments use the summary template, fixed emoji-label map, and do not repeat inline findings;
 - platform URLs, ids, and status bookkeeping stay in the agent report, not the comment body.

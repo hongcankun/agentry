@@ -71,7 +71,7 @@ Use a summary comment for cross-cutting findings, reviewer-run validation eviden
 
 Before drafting comment bodies, read `references/comment-format.md`; before presenting or publishing them, check the draft against that format. Keep inline comments location-focused, keep summary comments non-duplicative, and keep platform actions, published URLs, comment ids, review ids, and publish status in the agent report rather than in the published comment body.
 
-Published inline comments must use `Problem [Level]`, `Impact`, optional `Notes`, `Suggested fix`, and `_Source: ..._`. Published summary comments must use `Verdict`, `Change summary`, `Findings`, `Coverage`, `Validation`, optional `Notes`, optional `Remaining risk`, and `_Source: ..._`; include available reviewed-revision metadata in the summary source footer as a single structured line.
+Published comments must follow `references/comment-format.md` exactly, including the fixed emoji-label map, plain `_Source: ..._` footer, and summary reviewed-revision metadata when available.
 
 ### 5. Decide publication mode
 
