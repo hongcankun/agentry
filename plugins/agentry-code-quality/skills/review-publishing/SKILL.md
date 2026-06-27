@@ -11,6 +11,7 @@ Core rules:
 - Publish existing findings only; do not run a fresh broad review unless the user asks for a review or gate workflow.
 - Default to `draft only`; remote mutation requires explicit approval for the exact action.
 - Group near-duplicates and publish the smallest useful set of comments.
+- Prefer platform-native pending review or draft batch submission when publishing is approved and supported, so comments land as one review activity.
 - Keep inline comments, summary comments, platform action reports, and review-status actions separate.
 - Do not query, summarize, or publish platform-owned PR/MR checks, workflows, pipelines, or check runs by default.
 
@@ -31,7 +32,7 @@ Gather as much of the following as available:
 - publication intent: `draft only`, `summary only`, `inline only`, `publish`, `post now`, `publish without another confirmation`, or `do not publish`;
 - existing-thread mode: whether the user explicitly allows replying to or updating equivalent existing threads in the same publish pass;
 - comment volume preferences: explicit comment budget, grouped vs. one-comment-per-finding behavior, and whether to publish all draft comments when many are similar;
-- platform capabilities: review metadata, base/head revisions, changed files, comments, diff positions, and available CLI/API tooling.
+- platform capabilities: review metadata, base/head revisions, changed files, comments, diff positions, pending review or draft batch support, and available CLI/API tooling.
 
 If the target, findings source, publication mode, or platform is unclear, ask one concise clarifying question before preparing comments. If only publication authorization is unclear, draft comments and ask before remote mutation.
 
@@ -41,7 +42,7 @@ If the target, findings source, publication mode, or platform is unclear, ask on
 
 Identify the review target and platform from the provided URL, number, branch, selected context, current repository, or available hosting tools. Treat pull requests, merge requests, code reviews, and equivalent review surfaces as valid targets.
 
-Detect only the capabilities needed to publish comments: review metadata, base/head revisions, changed files, diff positions, existing discussion, comment actions, and review-status actions. When available, record the review version or patchset, head branch and commit, and base branch and commit for the summary `_Source:_` footer's structured `key=value` fields. Treat URL query parameters such as review version, checked commit SHA, or checked commit number as reviewed-revision metadata only.
+Detect only the capabilities needed to publish comments: review metadata, base/head revisions, changed files, diff positions, existing discussion, comment actions, pending review or draft batch support, and review-status actions. When available, record the review version or patchset, head branch and commit, and base branch and commit for the summary `_Source:_` footer's structured `key=value` fields. Treat URL query parameters such as review version, checked commit SHA, or checked commit number as reviewed-revision metadata only.
 
 Do not query PR/MR checks, workflow, pipeline, or check-run status by default, including when the review URL contains checked-commit parameters. Include that status only when the user explicitly asks for CI context, quality-gate coverage, or pipeline investigation, or when CI failure analysis is already part of the supplied findings.
 
@@ -79,6 +80,8 @@ Default to `draft only` unless the current instruction clearly approves publishi
 
 Treat clear instructions such as `publish`, `publish these comments`, `post now`, `post them now`, or `publish without another confirmation` as approval to publish comments within the requested or default budget. Ambiguous wording such as `prepare`, `draft`, `can you publish`, or `ready to publish` is not approval.
 
+Keep local `draft only` output distinct from platform-native remote drafts or pending review comments. Creating remote drafts, pending review comments, or review batches is still remote review-state mutation and requires the same explicit approval as immediate comment publication.
+
 Generic `publish` approval does not authorize replying to or updating existing threads. Existing-thread mutations require explicit wording such as `reply to existing threads where appropriate`, `update existing comments`, or `dedupe by replying/updating`.
 
 ### 6. Present or publish
@@ -89,10 +92,13 @@ When drafting comments, asking for approval, or reporting completed publication,
 - summary comment body;
 - any findings omitted and why;
 - whether the plan will be drafted only or published;
+- whether the platform supports pending review or draft batch submission, and whether that path will be used;
 - whether drafted comment bodies were checked against the published comment format;
 - the platform command or API action that will be used if publishing is approved.
 
-If the current instruction clearly approves publishing and the plan stays within the default or requested budget, publish the grouped inline comments and summary without asking for another confirmation. If the user also approved existing-thread mode, perform those replies or updates in the same pass.
+If the current instruction clearly approves publishing and the plan stays within the default or requested budget, publish the grouped inline comments and summary without asking for another confirmation. When the platform supports pending review or draft batch submission, prefer creating the approved comments as one pending/draft review batch and then submitting or publishing that batch once, so review activity and notifications are minimized. If the platform lacks reliable batch support, publish the approved comments individually. If the user also approved existing-thread mode, perform those replies or updates in the same pass.
+
+If remote draft or pending review creation partially fails, retry only safe or idempotent transient failures, such as rate limits, network failures before request acceptance, or API operations with an idempotency key. Before retrying an uncertain create operation or falling back to individual publication, re-read remote drafts, pending comments, and existing comments when the platform exposes them, then dedupe by stable fingerprint. Do not submit or publish a partial batch while its state is ambiguous. If created draft or pending comment ids are known, publish individually only for comments confirmed not to exist remotely; otherwise stop and report the ambiguous state to avoid duplicate comments or review activity. Report which drafts or pending comments were created, which comments were safely retried or individually published, which comments remain blocked, and any manual cleanup needed.
 
 Ask for explicit confirmation when approval is absent or ambiguous, or when the action escalates beyond what the user approved. Escalation cases include over-budget publication, all-comment publishing, many similar separate threads, existing-thread mutations without explicit approval, resolving threads, approving, requesting changes, merging, closing, or any other review-status mutation.
 
