@@ -643,7 +643,7 @@ class ArgparseTests(unittest.TestCase):
         p_uninstall.add_argument("--source", choices=("marketplace", "checkout"))
 
         p_inventory = sub.add_parser("inventory")
-        p_inventory.add_argument("--plugin")
+        p_inventory.add_argument("--plugin", action="append")
         p_inventory.add_argument("--component", action="append", choices=agentry.COMPONENT_CHOICES)
         p_inventory.add_argument("--details", action="store_true")
         p_inventory.add_argument("--paths", action="store_true")
@@ -687,6 +687,10 @@ class ArgparseTests(unittest.TestCase):
         args = self._parser().parse_args(["install", "--tool", "claude", "--component", "skills", "--component", "agents"])
         self.assertEqual(sorted(args.component), ["agents", "skills"])
 
+    def test_plugin_accumulates(self):
+        args = self._parser().parse_args(["install", "--tool", "claude", "--plugin", "b", "--plugin", "a"])
+        self.assertEqual(args.plugin, ["b", "a"])
+
     def test_component_all_parses(self):
         args = self._parser().parse_args(["install", "--tool", "claude", "--component", "all"])
         self.assertEqual(args.component, ["all"])
@@ -696,7 +700,7 @@ class ArgparseTests(unittest.TestCase):
             "inventory", "--plugin", "a", "--component", "skills", "--details", "--paths", "--json",
         ])
         self.assertEqual(args.command, "inventory")
-        self.assertEqual(args.plugin, "a")
+        self.assertEqual(args.plugin, ["a"])
         self.assertEqual(args.component, ["skills"])
         self.assertTrue(args.details)
         self.assertTrue(args.paths)
@@ -904,9 +908,23 @@ class LoadManifestTests(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["name"], "a")
 
+    def test_select_plugins_multiple_names_preserves_manifest_order(self):
+        result = agentry.select_plugins(self.repo.manifest_dict["plugins"], ["b", "a"])
+        self.assertEqual([p["name"] for p in result], ["a", "b"])
+
+    def test_select_plugins_dedupes_repeated_names(self):
+        result = agentry.select_plugins(self.repo.manifest_dict["plugins"], ["a", "a"])
+        self.assertEqual([p["name"] for p in result], ["a"])
+
     def test_select_plugins_unknown_aborts(self):
         with self.assertRaises(SystemExit):
             agentry.select_plugins(self.repo.manifest_dict["plugins"], "nope")
+
+    def test_select_plugins_reports_all_unknown_names(self):
+        with self.assertRaises(SystemExit) as cm:
+            agentry.select_plugins(self.repo.manifest_dict["plugins"], ["nope", "missing"])
+        self.assertIn("'nope'", str(cm.exception))
+        self.assertIn("'missing'", str(cm.exception))
 
 
 # ---------------------------------------------------------------------------
@@ -1357,7 +1375,7 @@ class DeliveryChannelTests(unittest.TestCase):
 
     def test_resolve_selection_interactive_prompts_for_tool_plugin_component_and_symlink(self):
         ns = _make_namespace(tool=None, defaults=False)
-        choices = iter(["trae", "a", ["rules"]])
+        choices = iter(["trae", ["a", "b"], ["rules"]])
 
         with mock.patch.object(sys.stdin, "isatty", return_value=True), \
                 mock.patch.object(sys.stdout, "isatty", return_value=True), \
@@ -1366,8 +1384,36 @@ class DeliveryChannelTests(unittest.TestCase):
             components = agentry.resolve_selection(ns, [{"name": "a"}, {"name": "b"}], marketplace=False)
 
         self.assertEqual(ns.tool, "trae")
-        self.assertEqual(ns.plugin, "a")
+        self.assertEqual(ns.plugin, ["a", "b"])
         self.assertTrue(ns.symlink)
+        self.assertEqual(components, {"rules"})
+
+    def test_resolve_selection_interactive_plugin_prompt_is_multi_select(self):
+        ns = _make_namespace(tool="trae", defaults=False)
+        choices = iter([["a", "b"], ["rules"]])
+
+        with mock.patch.object(sys.stdin, "isatty", return_value=True), \
+                mock.patch.object(sys.stdout, "isatty", return_value=True), \
+                mock.patch.object(agentry, "confirm", side_effect=[False, True]), \
+                mock.patch.object(agentry, "choose", side_effect=lambda *a, **kw: next(choices)) as choose:
+            components = agentry.resolve_selection(ns, [{"name": "a"}, {"name": "b"}], marketplace=False)
+
+        self.assertEqual(ns.plugin, ["a", "b"])
+        self.assertEqual(components, {"rules"})
+        self.assertEqual(choose.call_args_list[0].args[0], "Which plugins?")
+        self.assertTrue(choose.call_args_list[0].kwargs["multi"])
+
+    def test_resolve_selection_interactive_plugin_all_keeps_default(self):
+        ns = _make_namespace(tool="trae", defaults=False)
+        choices = iter([["all"], ["rules"]])
+
+        with mock.patch.object(sys.stdin, "isatty", return_value=True), \
+                mock.patch.object(sys.stdout, "isatty", return_value=True), \
+                mock.patch.object(agentry, "confirm", side_effect=[False, True]), \
+                mock.patch.object(agentry, "choose", side_effect=lambda *a, **kw: next(choices)):
+            components = agentry.resolve_selection(ns, [{"name": "a"}, {"name": "b"}], marketplace=False)
+
+        self.assertIsNone(ns.plugin)
         self.assertEqual(components, {"rules"})
 
 
