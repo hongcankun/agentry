@@ -52,7 +52,7 @@ Use the dogfooded `conventional-commits` and `git-workflow` skills for git work,
 - Never commit directly to `main`. Land changes through a short-lived branch and pull request.
 - Name branches as `type/short-description`; align the type with the Conventional Commit type.
 - Use Conventional Commits for commit messages and PR titles.
-- Add a brief commit body when the subject alone does not explain important context. Hard-wrap commit body prose at about 72 columns.
+- Add a brief commit body when the subject alone does not explain important context. Must hard-wrap commit body prose at about 72 columns.
 - Always ask for explicit confirmation before pushing, opening a PR, updating a PR, pushing tags, or creating/publishing a GitHub Release.
 - For clear local-only reversible git operations, state the plan and proceed without confirmation. Examples: staging, committing drafted changes, creating a branch for current work with `git switch -c`, switching clean branches, `git pull --ff-only`, `git branch -d`, and `git fetch --prune`.
 - Stop and ask before destructive commands, switching a dirty worktree away from current work, unclear merge cleanup, ambiguous commit scope, or any `git reset --hard` style shortcut.
