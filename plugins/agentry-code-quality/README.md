@@ -5,6 +5,7 @@ Code review and test-engineering skills, slash commands, and specialist subagent
 ## When To Install
 
 - Review code changes before merge.
+- Review a PR/MR and publish actionable findings as review comments.
 - Improve, repair, or assess automated tests.
 - Run a pre-merge quality gate.
 - Publish existing review findings to a review surface.
@@ -15,7 +16,7 @@ Code review and test-engineering skills, slash commands, and specialist subagent
 | --- | --- |
 | Skills | [`code-review`](./skills/code-review/SKILL.md), [`test-engineering`](./skills/test-engineering/SKILL.md), [`review-publishing`](./skills/review-publishing/SKILL.md) |
 | Subagents | [`code-reviewer`](./agents/code-reviewer.md), [`test-engineer`](./agents/test-engineer.md) |
-| Commands | [`review-code`](./commands/review-code.md), [`improve-tests`](./commands/improve-tests.md), [`quality-gate`](./commands/quality-gate.md), [`publish-review`](./commands/publish-review.md) |
+| Commands | [`review-code`](./commands/review-code.md), [`review-pr`](./commands/review-pr.md), [`improve-tests`](./commands/improve-tests.md), [`quality-gate`](./commands/quality-gate.md), [`publish-review`](./commands/publish-review.md) |
 | Rules | [`code-quality/code-review`](../../rules/code-quality/code-review.md), [`code-quality/code-style`](../../rules/code-quality/code-style.md), [`code-quality/testing`](../../rules/code-quality/testing.md) |
 
 ## Install
