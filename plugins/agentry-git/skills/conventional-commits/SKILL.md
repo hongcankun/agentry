@@ -70,7 +70,7 @@ Additional meta-information, e.g., breaking changes, issue references.
 2. Analyze the changes being committed to determine the appropriate `type`.
 3. Determine if a `scope` is appropriate (optional).
 4. Write a clear, concise `description`.
-5. Add a `body` if more context is needed (optional).
+5. Add a `body` if more context is needed (optional), preferably hard-wrapped around 72 columns unless the user or repository guidance asks for a different commit-message style.
 6. Add `footer(s)` if applicable (optional).
 7. Validate the commit message (use `scripts/validate_commit_message.py` if needed).
 

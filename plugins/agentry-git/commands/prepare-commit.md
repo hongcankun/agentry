@@ -24,7 +24,7 @@ If the intended commit scope is ambiguous, the worktree contains unrelated chang
    - include untracked file names from `git status`, reading file contents only when needed to understand the commit.
 4. Identify whether the changes form one coherent commit. If they should be split, propose focused commit groups and stop unless the user chooses one.
 5. Choose a Conventional Commit type and optional scope. Prefer the existing repository conventions when visible in recent commit history.
-6. Draft a commit message with a short imperative subject, optional body, and any relevant footer.
+6. Draft a commit message with a short imperative subject, optional body, and any relevant footer. If a body is needed, prefer hard-wrapping body prose with physical newlines at about 72 columns, unless the user or repository guidance asks for a different commit-message style.
 7. Present the exact files to stage and the exact commit message. Since staging and committing are local and reversible, proceed without an extra confirmation — but stop here if the scope, type, or message is questionable and the user may not have intended it.
 8. Stage only the planned paths and create the commit.
 9. Verify with `git status --short --branch` and, when practical, `git log -1 --oneline`.

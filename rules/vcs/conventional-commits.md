@@ -20,6 +20,7 @@ Follow the `conventional-commits` skill as the authoritative procedure for how t
 - Mark breaking changes explicitly with a `!` after the type/scope or a `BREAKING CHANGE:` footer.
 - Keep each commit focused on a single logical change so its type and description are unambiguous; split unrelated changes into separate commits.
 - Write the description in imperative mood, lowercase, with no trailing period.
+- When a commit message has a body, prefer hard-wrapping body prose with physical newlines at about 72 columns for terminal readability, unless the user explicitly asks for a different style for that commit.
 
 ## Before committing
 
