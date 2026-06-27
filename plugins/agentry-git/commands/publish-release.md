@@ -39,7 +39,7 @@ If the version, tag name, target commit, release-note source, or publication act
    - use a message file when the tag needs a body.
 9. Ask for explicit confirmation before pushing the tag. Pushing a tag is shared remote state.
 10. If confirmed, push only the tag with `git push origin <tag>`.
-11. If the repository is hosted on GitHub and `gh` is available, offer to draft a GitHub Release from the generated release notes after the tag is pushed. Creating a draft requires explicit confirmation; publishing a non-draft release requires separate confirmation.
+11. If the repository is hosted on GitHub and `gh` is available, offer to draft a GitHub Release from the generated release notes after the tag is pushed. Use `Release <tag>` as the default hosted release title unless the repository already has a different title convention or the user provides one explicitly. Include the hosted release title in the confirmation before creation. Creating a draft requires explicit confirmation; publishing a non-draft release requires separate confirmation.
 12. Verify the result:
    - use `git show --no-patch --format=fuller <tag>`;
    - if pushed, verify the remote tag with `git ls-remote --tags origin <tag>`;
@@ -61,5 +61,6 @@ Return:
 - release-note tooling detected and release-note verification result;
 - whether the tag was created locally, already existed, or was pushed;
 - any hosted release draft/publication action created, proposed, skipped, or blocked;
+- the hosted release title used or proposed, when applicable;
 - the tag message used or proposed;
 - validation performed, skipped, or blocked.
