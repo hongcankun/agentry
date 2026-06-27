@@ -1,11 +1,13 @@
 ---
-description: Run a combined pre-merge gate covering code quality, security risk, and test adequacy.
+description: Run an integrated pre-merge gate covering the review tracks and validation needed for a bounded change.
 argument-hint: "[change target or intent]"
 ---
 
 # Quality Gate
 
 Use this command when the user wants a consolidated pre-merge assessment of a bounded change before it is shipped, merged, or handed off for review.
+
+This command is the gate-oriented entry point for the `integrated-review` skill. Use `integrated-review` as the authoritative workflow for scope establishment, track selection, specialist delegation, validation, finding consolidation, and verdict reporting.
 
 ## Inputs
 
@@ -16,22 +18,14 @@ If the change scope, base branch, authorization for security review, or expected
 
 ## Workflow
 
-1. Establish the exact change scope once:
-   - for local work, inspect repository state and determine changed files with `git status --short --branch` and the relevant `git diff` command;
-   - for a branch or commit range, identify the base/target and inspect the range diff;
-   - for a PR/MR, read its metadata, description, checks, and diff when platform tools are available;
-   - for named files, review only those files unless the change requires nearby context.
-2. When subagent delegation is available, delegate the three tracks in parallel and give each subagent the same scope summary:
-   - `code-reviewer`: review correctness, maintainability, performance, readability, error handling, regression risk, and general engineering fit;
-   - `security-auditor`: audit security-sensitive boundaries, untrusted inputs, auth/authz, secrets, file or network access, dependency risk, and dangerous sinks;
-   - `test-engineer`: review test adequacy, missing behavior cases, failing or flaky tests, coverage risk, and the validation plan. Ask for review/planning unless the user explicitly allowed test edits.
-3. If subagents are unavailable, run the same tracks sequentially by following the `code-review`, `security-audit`, and `test-engineering` skills as the authoritative procedures.
-4. Run relevant validation commands when practical. Prefer the narrowest meaningful test/check first, then broader checks when the change crosses shared boundaries. Treat failing required checks as gate findings.
-5. Merge the track results:
-   - deduplicate overlapping findings;
-   - keep the highest justified severity for each issue;
-   - distinguish confirmed findings from residual risks, missing evidence, or hardening opportunities;
-   - mark confirmed security vulnerabilities and failing required checks as blocking.
+1. Run the `integrated-review` skill on the requested target or inferred local change.
+2. Tell the skill this command needs a gate report, not publication-ready review comments.
+3. Treat missing scope, degraded specialist coverage, failed required validation, confirmed correctness bugs, and confirmed security vulnerabilities as gate inputs.
+4. Map the integrated review result to the gate verdict:
+   - `pass` when no actionable findings or material residual risks remain;
+   - `pass with warnings` when only non-blocking risks, hardening opportunities, or degraded nonessential coverage remain;
+   - `request changes` when the change has actionable defects that should be fixed before merge;
+   - `block` when the change has confirmed severe risk, failing required validation, unsafe security exposure, or unresolved scope ambiguity.
 
 ## Constraints
 

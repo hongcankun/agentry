@@ -17,7 +17,7 @@ Core rules:
 ## When to use
 
 Use this skill when the task is to:
-- publish existing code-review, security-audit, test-review, or quality-gate findings;
+- publish existing code-review, integrated-review, security-audit, test-review, or quality-gate findings;
 - draft inline comments or a summary comment for a PR, MR, code review, or equivalent review surface;
 - deduplicate and map findings to review comments;
 - prepare comments in `draft only`, `summary only`, or `inline only` mode;
@@ -27,7 +27,7 @@ Use this skill when the task is to:
 
 Gather as much of the following as available:
 - the review target: PR/MR URL or number, branch, repository, review id, selected context, or plain-language target;
-- existing findings: prior review output, quality-gate report, audit report, test review notes, pasted findings, selected text, or generated report;
+- existing findings: prior review output, integrated-review or quality-gate report, audit report, test review notes, pasted findings, selected text, or generated report;
 - publication intent: `draft only`, `summary only`, `inline only`, `publish`, `post now`, `publish without another confirmation`, or `do not publish`;
 - existing-thread mode: whether the user explicitly allows replying to or updating equivalent existing threads in the same publish pass;
 - comment volume preferences: explicit comment budget, grouped vs. one-comment-per-finding behavior, and whether to publish all draft comments when many are similar;
@@ -49,7 +49,7 @@ When the platform exposes existing review discussion, read root comments and the
 
 ### 2. Gather existing findings
 
-Use findings from the conversation, selected text, files, or prior outputs such as `review-code`, `audit-security`, `improve-tests`, or `quality-gate`.
+Use findings from the conversation, selected text, files, or prior outputs such as `review-code`, `audit-security`, `improve-tests`, `integrated-review`, or `quality-gate`.
 
 Do not invent findings or run a fresh broad review by default. If no concrete findings are available, stop and ask the user to provide findings or run a review/gate workflow first.
 
