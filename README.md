@@ -52,7 +52,7 @@ python3 scripts/agentry.py install --tool trae --plugin agentry-code-quality --s
 python3 scripts/agentry.py status --tool trae --plugin agentry-code-quality
 ```
 
-The script supports two delivery channels: `marketplace`, which calls the target tool's plugin CLI at user scope, and `checkout`, which copies or symlinks components from this repository. Rules are installed separately because the plugin formats do not deliver rules. Run `python3 scripts/agentry.py install --help` for the full option reference.
+The script supports two delivery channels: `marketplace`, which calls the target tool's plugin CLI at user scope, and `checkout`, which copies or symlinks components from this repository. Rules are installed separately because the plugin formats do not deliver rules. Use `python3 scripts/agentry.py install --help` for options such as selecting multiple plugins, dry runs, and component filters.
 
 ## Plugins
 
@@ -86,7 +86,7 @@ Agentry currently ships **5 plugins** with **37 components**: 14 skills, 4 subag
 - [`agentry.json`](./agentry.json) — canonical, tool-agnostic manifest. **Edit this**, then regenerate derived files.
 - [`plugins/`](./plugins) — each plugin's skills (`skills/<name>/SKILL.md`), subagents (`agents/<name>.md`), and commands (`commands/<name>.md`).
 - [`rules/`](./rules) — tool-agnostic rules, organized by topic; associated with plugins via the manifest.
-- [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` a plugin's components into a tool's directories, report the manifest with `inventory`, and `generate` per-tool packaging from the manifest.
+- [`scripts/agentry.py`](./scripts/agentry.py) — maintenance CLI: `install`/`status`/`uninstall` selected plugin components into a tool's directories, report the manifest with `inventory`, and `generate` per-tool packaging from the manifest.
 - [`scripts/tests/`](./scripts/tests) — stdlib-only (`unittest`) tests for `scripts/agentry.py`.
 
 Regenerate generated packaging after manifest or extension changes, or validate the repository before opening a PR:

@@ -7,7 +7,7 @@ the per-tool packaging derived from the manifest.
 
 Subcommands:
 
-- ``install``   — copy or symlink a plugin's components into a tool's dirs.
+- ``install``   — copy or symlink selected plugins' components into a tool's dirs.
 - ``status``    — report each item's install state without writing; exit 1 on drift.
 - ``uninstall`` — remove components this tool installed (owned copies/links).
 - ``inventory`` — report manifest plugins, versions, and component membership.
@@ -298,14 +298,31 @@ def load_plugins():
     return load_manifest().get("plugins", [])
 
 
-def select_plugins(plugins, plugin_name):
-    if not plugin_name:
+def plugin_selection_label(plugin_names):
+    """Return a compact human label for the current plugin selection."""
+    if not plugin_names:
+        return "all"
+    if isinstance(plugin_names, str):
+        return plugin_names
+    return ", ".join(dict.fromkeys(plugin_names))
+
+
+def select_plugins(plugins, plugin_names):
+    if not plugin_names:
         return plugins
-    match = next((p for p in plugins if p.get("name") == plugin_name), None)
-    if match is None:
+    if isinstance(plugin_names, str):
+        plugin_names = [plugin_names]
+
+    requested = list(dict.fromkeys(plugin_names))
+    available = {p.get("name") for p in plugins}
+    unknown = [name for name in requested if name not in available]
+    if unknown:
         names = ", ".join(p.get("name", "?") for p in plugins)
-        sys.exit(f"error: unknown plugin '{plugin_name}'. Available: {names}")
-    return [match]
+        quoted = ", ".join(f"'{name}'" for name in unknown)
+        sys.exit(f"error: unknown plugin(s) {quoted}. Available: {names}")
+
+    requested_set = set(requested)
+    return [p for p in plugins if p.get("name") in requested_set]
 
 
 def validate_path_fragment(value, label, *, allow_nested):
@@ -1336,7 +1353,7 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
     unset = args.plugin is None or component_unset or (writes and not args.symlink)
     if interactive and not args.defaults and unset:
         comps = ", ".join(sorted(args.component)) if args.component else ", ".join(sorted(default_components))
-        defaults_desc = [f"plugin: {args.plugin or 'all'}", f"components: {comps}"]
+        defaults_desc = [f"plugin: {plugin_selection_label(args.plugin)}", f"components: {comps}"]
         if writes:
             defaults_desc.append(f"mode: {'symlink' if args.symlink else 'copy'}")
         args.defaults = confirm(f"Use defaults ({' · '.join(defaults_desc)})?", default=True)
@@ -1345,8 +1362,8 @@ def resolve_selection(args, all_plugins, marketplace, removing=False):
     ask_optional = interactive and not args.defaults
 
     if args.plugin is None and ask_optional:
-        picked = choose("Which plugin?", ["all"] + [p["name"] for p in all_plugins], default="all")
-        if picked != "all":
+        picked = choose("Which plugins?", ["all"] + [p["name"] for p in all_plugins], default="all", multi=True)
+        if "all" not in picked:
             args.plugin = picked
 
     if component_unset and ask_optional:
@@ -1430,7 +1447,7 @@ def print_run_header(args, base, scope, components, action, channel=None):
     """Print the common title/detail block for install/status/uninstall."""
     title = ("📦 " if _USE_EMOJI else "") + f"{BRAND} — {args.tool}, {scope} scope ({base})"
     print(colorize(title, "cyan"))
-    detail = [f"plugin: {args.plugin or 'all'}", f"components: {', '.join(sorted(components))}"]
+    detail = [f"plugin: {plugin_selection_label(args.plugin)}", f"components: {', '.join(sorted(components))}"]
     if channel is not None:
         detail.append(f"source: {channel}")
     if action == "install":
@@ -2056,7 +2073,11 @@ def add_selection_args(parser, *, writes):
         help="Target AI coding tool. Optional when running interactively (you will be "
         "prompted); required otherwise.",
     )
-    parser.add_argument("--plugin", help="Act on only this plugin's components (default: all plugins).")
+    parser.add_argument(
+        "--plugin",
+        action="append",
+        help="Plugin to act on (repeatable; default: all plugins).",
+    )
     parser.add_argument(
         "--component",
         action="append",
@@ -2120,7 +2141,7 @@ def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog
     )
     sub = parser.add_subparsers(dest="command", title="commands", metavar="<command>")
 
-    install_help = "Install a plugin's components into a tool's directories."
+    install_help = "Install selected plugins' components into a tool's directories."
     p_install = sub.add_parser("install", help=install_help, description=install_help)
     add_selection_args(p_install, writes=True)
     p_install.add_argument("--dry-run", action="store_true", help="Show what would be installed without writing.")
@@ -2177,7 +2198,7 @@ def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog
 
     inventory_help = "Report manifest plugins, versions, and component membership."
     p_inventory = sub.add_parser("inventory", help=inventory_help, description=inventory_help)
-    p_inventory.add_argument("--plugin", help="Report only this plugin (default: all plugins).")
+    p_inventory.add_argument("--plugin", action="append", help="Plugin to report (repeatable; default: all plugins).")
     p_inventory.add_argument(
         "--component",
         action="append",
