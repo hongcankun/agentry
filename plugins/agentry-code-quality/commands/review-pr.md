@@ -7,7 +7,7 @@ argument-hint: "[PR/MR/review target] [publication preferences]"
 
 Use this command when the user wants a PR, MR, or equivalent review surface reviewed and wants actionable findings published as review comments.
 
-This command is for the combined workflow: discover findings through a bounded review, then publish those findings through the `review-publishing` skill. Use `publish-review` instead when findings already exist and only need to be drafted or published.
+This command is for the combined workflow: discover findings through a bounded integrated review, then publish those findings through the `review-publishing` skill. Use `publish-review` instead when findings already exist and only need to be drafted or published.
 
 ## Inputs
 
@@ -22,13 +22,14 @@ If the review target, repository, or review scope is ambiguous, ask one concise 
 
 1. Resolve the review target and platform. Read the PR/MR metadata, description, changed files, diff, and existing review discussion when platform tooling supports it.
 2. Determine the publication language from explicit invocation preferences, current conversation preference, repository or platform convention, or the assistant's current response language. Do not hard-code any specific language as part of this command.
-3. Review the target with the `quality-gate` workflow as the default finding method:
+3. Review the target with the `integrated-review` skill as the default finding method:
    - establish the exact base, head, and changed scope;
-   - cover code quality, security risk, and test adequacy;
+   - identify the code, security, test, validation, documentation, release, or operations tracks that apply;
+   - delegate to specialist subagents when available, or follow the proper specialist skills directly;
    - run practical reviewer-owned validation checks when useful;
    - consolidate findings by severity and remove duplicates.
 4. Treat this command invocation as explicit approval to publish comment-only review feedback within the requested or default budget. Pass the consolidated findings to the `review-publishing` skill and follow it as the authoritative publication procedure, including its grouping, comment format, dedupe, reviewed-revision metadata, and output contract.
-5. If the gate finds no actionable publishable findings, publish a compact clean summary comment by default so the review surface records that the review ran. Skip remote publication only when the user requested `draft only`, `do not publish`, or no clean summary comment.
+5. If the integrated review finds no actionable publishable findings, publish a compact clean summary comment by default so the review surface records that the review ran. Skip remote publication only when the user requested `draft only`, `do not publish`, or no clean summary comment.
 6. Publish only the approved comment set:
    - default budget: up to 8 inline comments plus 1 summary comment;
    - group or skip near-duplicates;

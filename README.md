@@ -56,19 +56,19 @@ The script supports two delivery channels: `marketplace`, which calls the target
 
 ## Plugins
 
-Agentry currently ships **5 plugins** with **37 components**: 14 skills, 4 subagents, 12 commands, and 7 rules. Use `python3 scripts/agentry.py inventory --details` for the full manifest-derived inventory.
+Agentry currently ships **5 plugins** with **39 components**: 15 skills, 4 subagents, 13 commands, and 7 rules. Use `python3 scripts/agentry.py inventory --details` for the full manifest-derived inventory.
 
 | Plugin | Version | Best for | Skills | Agents | Commands | Rules |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| [`agentry-code-quality`](./plugins/agentry-code-quality) | 0.10.8 | Code review, test design, test repair, review publishing, and pre-merge quality gates. | 3 | 2 | 4 | 3 |
+| [`agentry-code-quality`](./plugins/agentry-code-quality) | 0.12.0 | Code review, integrated review, test design, review publishing, and pre-merge quality gates. | 4 | 2 | 5 | 3 |
 | [`agentry-security`](./plugins/agentry-security) | 0.4.0 | Threat-driven audits for auth, user input, file/network access, crypto, secrets, payments, and other sensitive code. | 1 | 1 | 1 | 1 |
-| [`agentry-git`](./plugins/agentry-git) | 0.6.2 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
+| [`agentry-git`](./plugins/agentry-git) | 0.6.3 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
 | [`agentry-authoring`](./plugins/agentry-authoring) | 0.4.0 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
 | [`agentry-docs`](./plugins/agentry-docs) | 0.2.0 | README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
 
 ### Choosing Plugins
 
-- Install [`agentry-code-quality`](./plugins/agentry-code-quality) for everyday engineering review work: review a diff, improve tests, run a quality gate, or publish review findings.
+- Install [`agentry-code-quality`](./plugins/agentry-code-quality) for everyday engineering review work: review a diff, coordinate an integrated review, improve tests, run a quality gate, or publish review findings.
 - Install [`agentry-security`](./plugins/agentry-security) when agents need a dedicated security audit workflow and a proactive security-auditor subagent.
 - Install [`agentry-git`](./plugins/agentry-git) when agents should help with local commits, pull requests, merged-branch cleanup, and release publishing.
 - Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching manager skills plus cross-artifact review.

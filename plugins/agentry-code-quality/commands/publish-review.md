@@ -10,7 +10,7 @@ Use this command when the user wants to draft or publish existing review finding
 ## Inputs
 
 - `[PR/MR/review target]`: Optional review URL, PR/MR number, branch, repository, review id, selected context, or plain-language target. If omitted, infer the review target from the current branch or active repository when platform tooling supports it.
-- `[findings or publish intent]`: Optional selected findings, prior review output, quality-gate output, audit report, test review notes, or publication mode. Default: `draft only` unless the current instruction explicitly approves publishing. Supported modes include `draft only`, `summary only`, `inline only`, `publish`, `post now`, `publish without another confirmation`, and `do not publish`.
+- `[findings or publish intent]`: Optional selected findings, prior review output, integrated-review or quality-gate output, audit report, test review notes, or publication mode. Default: `draft only` unless the current instruction explicitly approves publishing. Supported modes include `draft only`, `summary only`, `inline only`, `publish`, `post now`, `publish without another confirmation`, and `do not publish`.
 - `[comment volume]`: Optional comment budget or explicit instruction to publish all draft comments. Default: up to 8 inline comments plus 1 summary comment, with near-duplicates grouped or skipped.
 - Existing-thread mode may be supplied in the same input, such as `reply to existing threads where appropriate` or `update existing comments`. Generic `publish` approval does not authorize existing-thread mutations.
 
