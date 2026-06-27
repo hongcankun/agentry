@@ -41,7 +41,7 @@ If the target, findings source, publication mode, or platform is unclear, ask on
 
 Identify the review target and platform from the provided URL, number, branch, selected context, current repository, or available hosting tools. Treat pull requests, merge requests, code reviews, and equivalent review surfaces as valid targets.
 
-Detect only the capabilities needed to publish comments: review metadata, base/head revisions, changed files, diff positions, existing discussion, comment actions, and review-status actions. When available, record the review version or patchset, head branch and commit, and base branch and commit for the summary `_Source:_` footer. Treat URL query parameters such as review version, checked commit SHA, or checked commit number as reviewed-revision metadata only.
+Detect only the capabilities needed to publish comments: review metadata, base/head revisions, changed files, diff positions, existing discussion, comment actions, and review-status actions. When available, record the review version or patchset, head branch and commit, and base branch and commit for the summary `_Source:_` footer's structured `key=value` fields. Treat URL query parameters such as review version, checked commit SHA, or checked commit number as reviewed-revision metadata only.
 
 Do not query PR/MR checks, workflow, pipeline, or check-run status by default, including when the review URL contains checked-commit parameters. Include that status only when the user explicitly asks for CI context, quality-gate coverage, or pipeline investigation, or when CI failure analysis is already part of the supplied findings.
 
@@ -71,7 +71,7 @@ Use a summary comment for cross-cutting findings, reviewer-run validation eviden
 
 Before drafting comment bodies, read `references/comment-format.md`; before presenting or publishing them, check the draft against that format. Keep inline comments location-focused, keep summary comments non-duplicative, and keep platform actions, published URLs, comment ids, review ids, and publish status in the agent report rather than in the published comment body.
 
-Published inline comments must use `Problem [Level]`, `Impact`, optional `Notes`, `Suggested fix`, and `_Source: ..._`. Published summary comments must use `Verdict`, `Change summary`, `Findings`, `Coverage`, `Validation`, optional `Notes`, optional `Remaining risk`, and `_Source: ..._`; include available reviewed-revision metadata in the summary source footer.
+Published inline comments must use `Problem [Level]`, `Impact`, optional `Notes`, `Suggested fix`, and `_Source: ..._`. Published summary comments must use `Verdict`, `Change summary`, `Findings`, `Coverage`, `Validation`, optional `Notes`, optional `Remaining risk`, and `_Source: ..._`; include available reviewed-revision metadata in the summary source footer as a single structured line.
 
 ### 5. Decide publication mode
 
