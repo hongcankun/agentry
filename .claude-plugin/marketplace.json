@@ -3,7 +3,7 @@
   "$generated": "GENERATED from agentry.json by 'scripts/agentry.py generate claude'. Do not edit by hand.",
   "name": "agentry",
   "description": "A collection of reusable extensions for AI coding agents, grouped into plugins.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "owner": {
     "name": "hongcankun"
   },
