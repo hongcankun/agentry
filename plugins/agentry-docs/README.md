@@ -9,6 +9,12 @@ Lightweight documentation authoring for software repositories, currently focused
 - Keep repository documentation clear and aligned with project structure.
 - Install only README-focused documentation help without the broader extension-authoring toolkit.
 
+## Common Use
+
+- Use `/update-readme` when creating, refreshing, or simplifying a repository README.
+- Use `readme-manager` directly when the agent should ground README changes in project structure, setup, usage, contribution, and license evidence.
+- Pair with [`agentry-authoring`](../agentry-authoring) when README updates describe skills, commands, rules, subagents, prompt templates, or plugin metadata.
+
 ## Components
 
 | Type | Components |

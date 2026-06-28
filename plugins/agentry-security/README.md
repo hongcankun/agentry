@@ -8,6 +8,12 @@ Security audit skill, command, and specialist subagent for threat-driven code re
 - Map attack surface and trust boundaries.
 - Hunt for vulnerabilities with exploit scenarios and concrete remediations.
 
+## Common Use
+
+- Use `/audit-security` before merge when a change touches auth, authorization, user input, file or network access, cryptography, secrets, or payments.
+- Use the `security-auditor` subagent for an isolated threat-driven review when delegation is available.
+- Pair with [`agentry-code-quality`](../agentry-code-quality) when the same change also needs general correctness, maintainability, and test-quality review.
+
 ## Components
 
 | Type | Components |

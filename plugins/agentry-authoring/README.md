@@ -8,6 +8,13 @@ Authoring skills and review support for building AI agent extensions: create and
 - Review extension content for accuracy, clarity, consistency, and portability.
 - Manage plugin membership, marketplace metadata, and cross-artifact documentation.
 
+## Common Use
+
+- Use the matching manager skill while creating or updating an artifact: `skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, `prompt-template-manager`, or `plugin-manager`.
+- Use `/review-authoring` after changing skills, commands, rules, subagents, prompt templates, plugin metadata, or docs that describe those artifacts.
+- Use the `authoring-reviewer` subagent for an isolated cross-artifact review when delegation is available.
+- Pair with [`agentry-docs`](../agentry-docs) when README updates are part of the same extension change.
+
 ## Components
 
 | Type | Components |
