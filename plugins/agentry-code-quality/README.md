@@ -11,6 +11,14 @@ Code review, integrated review orchestration, test-engineering, and review-publi
 - Run a pre-merge quality gate.
 - Publish existing review findings to a review surface.
 
+## Common Use
+
+- Use `/improve-tests` before merge when a feature or bug fix needs stronger automated coverage.
+- Use `/quality-gate` for an integrated pre-merge check across code review, testing, and validation.
+- Use `/review-pr` when a PR/MR should be reviewed and findings published in one workflow.
+- Use `/publish-review` when review findings already exist and only need to be drafted or posted.
+- Pair with [`agentry-git`](../agentry-git) when the same workflow should continue into `/prepare-commit`, `/prepare-pr`, or `/finish-pr`.
+
 ## Components
 
 | Type | Components |

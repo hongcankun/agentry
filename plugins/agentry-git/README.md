@@ -9,6 +9,13 @@ Git workflow and Conventional Commits skills for branching, merging, rebasing, p
 - Clean up merged branches safely.
 - Prepare and publish project releases.
 
+## Common Use
+
+- Use `/prepare-commit` to stage a focused change set and create a local Conventional Commit on an appropriate branch.
+- Use `/prepare-pr` to draft PR title/body, then push and create or update the PR only after explicit confirmation.
+- Use `/finish-pr` after merge to fast-forward the base branch, delete the merged local feature branch, and prune stale remote-tracking refs.
+- Use `/prepare-release` and `/publish-release` for the release-prep and post-merge publish stages.
+
 ## Components
 
 | Type | Components |
