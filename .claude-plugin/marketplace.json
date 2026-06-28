@@ -15,7 +15,7 @@
       "name": "agentry-code-quality",
       "source": "./agentry-code-quality",
       "description": "Code review, integrated review orchestration, test-engineering, review publishing, and specialist subagents that catch correctness, security, maintainability, and test-quality issues with actionable guidance.",
-      "version": "0.12.4",
+      "version": "0.12.5",
       "category": "code-quality",
       "keywords": [
         "code-review",
