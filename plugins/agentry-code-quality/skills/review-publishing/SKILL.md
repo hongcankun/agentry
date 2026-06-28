@@ -32,7 +32,7 @@ Gather as much of the following as available:
 - publication intent: `draft only`, `summary only`, `inline only`, `publish`, `post now`, `publish without another confirmation`, or `do not publish`;
 - existing-thread mode: whether the user explicitly allows replying to or updating equivalent existing threads in the same publish pass;
 - comment volume preferences: explicit comment budget, grouped vs. one-comment-per-finding behavior, and whether to publish all draft comments when many are similar;
-- platform capabilities: review metadata, base/head revisions, changed files, comments, diff positions, pending review or draft batch support, and available CLI/API tooling.
+- platform capabilities: review metadata, base/head revisions, changed files, diff positions, pending review or draft batch support, existing comments for dedupe after findings are gathered, and available CLI/API tooling.
 
 If the target, findings source, publication mode, or platform is unclear, ask one concise clarifying question before preparing comments. If only publication authorization is unclear, draft comments and ask before remote mutation.
 
@@ -46,7 +46,7 @@ Detect only the capabilities needed to publish comments: review metadata, base/h
 
 Do not query PR/MR checks, workflow, pipeline, or check-run status by default, including when the review URL contains checked-commit parameters. Include that status only when the user explicitly asks for CI context, quality-gate coverage, or pipeline investigation, or when CI failure analysis is already part of the supplied findings.
 
-Do not read existing review discussion while resolving the target unless the user's supplied findings already depend on a specific thread. Keep discussion content out of the findings-gathering context so earlier comments do not bias or substitute for independent review evidence.
+Do not read existing review discussion while resolving the target unless the user's supplied findings already depend on a specific thread. Do not prefetch comments in parallel with metadata, changed files, or diff collection. Keep discussion content out of the findings-gathering context so earlier comments do not bias or substitute for independent review evidence.
 
 ### 2. Gather existing findings
 

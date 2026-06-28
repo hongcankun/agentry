@@ -21,7 +21,7 @@ When changing extensions or plugin membership:
 3. Do not bump the top-level project release `version` in ordinary change PRs. Bump it only in explicit release-prep PRs, following `README.md#versioning`.
 4. Regenerate packaging with `python3 scripts/agentry.py generate`.
 5. Keep user-facing docs in sync:
-   - update the top-level `README.md` for catalog-wide install, plugin list, versioning, or workflow changes;
+   - update the top-level `README.md` for catalog-wide install, plugin list, plugin version table entries, versioning, or workflow changes;
    - update `plugins/<plugin>/README.md` for plugin-specific purpose, install guidance, component table, or workflow changes.
 6. In release-prep PRs only, update `CHANGELOG.md` with `git-cliff --tag vX.Y.Z --output CHANGELOG.md`.
 7. Validate with:
