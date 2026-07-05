@@ -17,6 +17,7 @@ claude plugin install agentry-security@agentry
 claude plugin install agentry-git@agentry
 claude plugin install agentry-authoring@agentry
 claude plugin install agentry-docs@agentry
+claude plugin install agentry-collaboration@agentry
 ```
 
 Update later with `claude plugin marketplace update agentry`. In the interactive Claude Code UI, use the same commands with a leading slash.
@@ -30,6 +31,7 @@ traecli plugin install agentry-security@agentry
 traecli plugin install agentry-git@agentry
 traecli plugin install agentry-authoring@agentry
 traecli plugin install agentry-docs@agentry
+traecli plugin install agentry-collaboration@agentry
 ```
 
 Update later with `traecli plugin marketplace upgrade agentry`. In the interactive Trae UI, use the same commands with a leading slash.
@@ -56,7 +58,7 @@ The script supports two delivery channels: `marketplace`, which calls the target
 
 ## Plugins
 
-Agentry currently ships **5 plugins** with **39 components**: 15 skills, 4 subagents, 13 commands, and 7 rules. Use `python3 scripts/agentry.py inventory --details` for the full manifest-derived inventory.
+Agentry currently ships **6 plugins** with **42 components**: 16 skills, 4 subagents, 15 commands, and 7 rules. Use `python3 scripts/agentry.py inventory --details` for the full manifest-derived inventory.
 
 | Plugin | Version | Best for | Skills | Agents | Commands | Rules |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
@@ -65,6 +67,7 @@ Agentry currently ships **5 plugins** with **39 components**: 15 skills, 4 subag
 | [`agentry-git`](./plugins/agentry-git) | 0.6.3 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
 | [`agentry-authoring`](./plugins/agentry-authoring) | 0.4.0 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
 | [`agentry-docs`](./plugins/agentry-docs) | 0.2.1 | Accurate README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
+| [`agentry-collaboration`](./plugins/agentry-collaboration) | 0.1.0 | Authoring and triaging change requests: feature requests, bug reports, and refactor proposals. | 1 | 0 | 2 | 0 |
 
 ### Choosing Plugins
 
@@ -73,6 +76,7 @@ Agentry currently ships **5 plugins** with **39 components**: 15 skills, 4 subag
 - Install [`agentry-git`](./plugins/agentry-git) when agents should help with local commits, pull requests, merged-branch cleanup, and release publishing.
 - Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching manager skills plus cross-artifact review.
 - Install [`agentry-docs`](./plugins/agentry-docs) when the main need is README maintenance without the broader authoring toolkit.
+- Install [`agentry-collaboration`](./plugins/agentry-collaboration) when agents should help write well-framed feature requests, bug reports, or refactor proposals, and triage incoming ones.
 
 ### Component Types
 

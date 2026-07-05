@@ -65,6 +65,17 @@
       "agents": [],
       "commands": ["update-readme"],
       "rules": []
+    },
+    {
+      "name": "agentry-collaboration",
+      "description": "Author and triage change requests — feature requests, bug reports, and refactor proposals — for work carried out by humans or AI agents.",
+      "version": "0.1.0",
+      "category": "collaboration",
+      "keywords": ["change-request", "feature-request", "bug-report", "issue", "triage", "collaboration"],
+      "skills": ["change-request"],
+      "agents": [],
+      "commands": ["draft-change-request", "triage-change-request"],
+      "rules": []
     }
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "$generated": "GENERATED from agentry.json by 'scripts/agentry.py generate claude'. Do not edit by hand.",
+  "name": "agentry-collaboration",
+  "description": "Author and triage change requests — feature requests, bug reports, and refactor proposals — for work carried out by humans or AI agents.",
+  "version": "0.1.0",
+  "author": {
+    "name": "hongcankun"
+  },
+  "homepage": "https://github.com/hongcankun/agentry",
+  "repository": "https://github.com/hongcankun/agentry",
+  "license": "MIT"
+}
