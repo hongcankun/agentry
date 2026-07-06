@@ -1,0 +1,1 @@
+../../plugins/agentry-collaboration/commands/draft-design-proposal.md
