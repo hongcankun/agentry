@@ -1,0 +1,4 @@
+# Change requests use the templates above (feature, bug, refactor). Blank
+# issues stay enabled for asks the templates do not cover, such as questions
+# or a design proposal for an already-accepted change.
+blank_issues_enabled: true
