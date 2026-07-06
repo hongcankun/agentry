@@ -11,6 +11,7 @@ Project-specific guidance for AI agents maintaining this repository. This is met
   - `.trae-plugin/marketplace.json`
   - derived skill references under `plugins/<plugin>/skills/<skill>/references/`
 - For derived skill references, edit the canonical rule under `rules/`, then regenerate. Fence maintainer-only prose with `<!-- skill-reference:exclude:begin -->` and `<!-- skill-reference:exclude:end -->` when it must not appear in the portable skill copy.
+- The GitHub issue templates under `.github/ISSUE_TEMPLATE/` mirror the `change-request` skill's templates in `plugins/agentry-collaboration/skills/change-request/assets/` (feature, bug, refactor). Those assets are canonical; the issue-template bodies are hand-synced copies with a GitHub front-matter header, not part of `scripts/agentry.py generate`. When you change a change-request asset, update the matching issue template to match.
 
 ## Extension Changes
 
