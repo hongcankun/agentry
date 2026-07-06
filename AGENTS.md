@@ -63,5 +63,7 @@ Use the dogfooded `conventional-commits` and `git-workflow` skills for git work,
 - Keep extensions tool-agnostic. Put per-tool behavior in generators, not in portable skill, rule, command, or agent content.
 - Rules live once under `rules/`, organized by topic, and are associated to plugins through each plugin's `rules` array in `agentry.json`. Every rule must be referenced by at least one plugin.
 - A rule may be referenced by multiple plugins. Do not nest rules inside a single plugin.
-- When a reference crosses a plugin boundary, name the other plugin, for example `agentry-git`.
+- Keep skills, commands, and agents self-contained and portable: describe boundaries to neighboring stages by concept, not by extension name (for example, "code review of the resulting PR is a separate downstream stage", or "settle the change request upstream first"). This holds even for a sibling in the same plugin — name the stage, not the skill.
+- Name another extension in portable content only when the reference is a genuine dependency — a command or agent naming the skill it wraps or delegates to within the same plugin, orchestration or delegation that invokes another extension's capability (for example, `integrated-review` using `agentry-security`), or routing the user to the correct skill for a different job.
+- Put cross-plugin pairing, sibling-skill routing, and install guidance in the plugin README, using the standard `Pair with [`plugin`](../plugin) when …` bullet for other plugins.
 - Skills must be self-contained and must not require a rule to be installed. If a skill needs rule text, embed it through the plugin's `skillReferences` map and regenerate.

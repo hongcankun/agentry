@@ -84,8 +84,8 @@
     {
       "name": "agentry-collaboration",
       "source": "./agentry-collaboration",
-      "description": "Author and triage change requests — feature requests, bug reports, and refactor proposals — for work carried out by humans or AI agents.",
-      "version": "0.1.0",
+      "description": "Author and triage collaboration artifacts across the change lifecycle: change requests (feature requests, bug reports, refactor proposals) that frame the Why, and design proposals or RFCs that answer the How, for work carried out by humans or AI agents.",
+      "version": "0.2.0",
       "category": "collaboration",
       "keywords": [
         "change-request",
@@ -93,6 +93,9 @@
         "bug-report",
         "issue",
         "triage",
+        "design-proposal",
+        "rfc",
+        "design-doc",
         "collaboration"
       ]
     }
