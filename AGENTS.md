@@ -13,6 +13,15 @@ Project-specific guidance for AI agents maintaining this repository. This is met
 - For derived skill references, edit the canonical rule under `rules/`, then regenerate. Fence maintainer-only prose with `<!-- skill-reference:exclude:begin -->` and `<!-- skill-reference:exclude:end -->` when it must not appear in the portable skill copy.
 - The GitHub issue templates under `.github/ISSUE_TEMPLATE/` mirror the `change-request` skill's templates in `plugins/agentry-collaboration/skills/change-request/assets/` (feature, bug, refactor). Those assets are canonical; the issue-template bodies are hand-synced copies with a GitHub front-matter header, not part of `scripts/agentry.py generate`. When you change a change-request asset, update the matching issue template to match.
 
+## Design Proposals
+
+- Store written design proposals under `docs/designs/`; use inline notes in the issue or PR only for small reversible changes.
+- Use one shared design sequence for lightweight design docs and full RFCs. Assign the next four-digit zero-padded ID from `docs/designs/README.md`.
+- Name files as `<id>-<short-kebab-title>.md` and title them `# Design <id>: <Title>`.
+- Include `ID`, `Form`, `Status`, `Answers`, and `Author(s)` metadata near the top of each design. Use `Form` to distinguish `Design Doc` from `RFC`.
+- Keep `docs/designs/README.md` in sync with every added, renamed, superseded, or status-changed design.
+- Link each design back to the accepted change request it answers through `Answers`; supersede reviewed designs rather than deleting them.
+
 ## Extension Changes
 
 When changing extensions or plugin membership:
