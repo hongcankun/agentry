@@ -6,7 +6,7 @@ This directory stores design proposals for accepted changes. A design proposal m
 
 | ID | Form | Title | Status | Answers |
 | --- | --- | --- | --- | --- |
-| _None yet_ |  |  |  |  |
+| 0001 | RFC | [Behavioral Evaluation for Authoring Artifacts](./0001-behavioral-evaluation-authoring-artifacts.md) | Accepted | [#85](https://github.com/hongcankun/agentry/issues/85) |
 
 ## Convention
 
