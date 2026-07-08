@@ -6,6 +6,10 @@
 - **Answers:** (link to the accepted change request / issue this designs)
 - **Author(s):** (names)
 
+## Summary
+
+(One short paragraph: the problem in a sentence and the approach you propose in a sentence. Enough for a reviewer to know what this design does before reading the details.)
+
 ## Motivation
 
 (One or two sentences: the core of the accepted change request — the problem and desired outcome — linked under **Answers** above. Recap, do not re-justify.)
@@ -18,7 +22,7 @@
 
 ## Alternatives Considered
 
-(The one or two real options weighed and why the chosen approach wins, plus the main drawback of the chosen one. If there were no alternatives worth weighing, say so and why the choice is obvious.)
+(The one or two real options weighed and why the chosen approach wins, plus the main drawback of the chosen one. Mention relevant prior art here when it influenced the chosen approach; use the RFC form if prior art needs dedicated treatment. If there were no alternatives worth weighing, say so and why the choice is obvious.)
 
 ## Impact
 
