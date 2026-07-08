@@ -67,7 +67,7 @@ Agentry currently ships **6 plugins** with **45 components**: 17 skills, 4 subag
 | [`agentry-git`](./plugins/agentry-git) | 0.6.3 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
 | [`agentry-authoring`](./plugins/agentry-authoring) | 0.4.0 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
 | [`agentry-docs`](./plugins/agentry-docs) | 0.2.1 | Accurate README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
-| [`agentry-collaboration`](./plugins/agentry-collaboration) | 0.2.0 | Authoring and triaging collaboration artifacts across the change lifecycle: change requests that frame the Why, and design proposals or RFCs that answer the How. | 2 | 0 | 4 | 0 |
+| [`agentry-collaboration`](./plugins/agentry-collaboration) | 0.2.1 | Authoring and triaging collaboration artifacts across the change lifecycle: change requests that frame the Why, and design proposals or RFCs that answer the How. | 2 | 0 | 4 | 0 |
 
 ### Choosing Plugins
 

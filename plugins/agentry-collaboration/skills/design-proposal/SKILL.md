@@ -40,7 +40,7 @@ Size the change first, then pick the lightest artifact that still lets a reviewe
 | Change | Weight | Artifact |
 | --- | --- | --- |
 | Small, reversible, single-component | Inline design note | A short paragraph in the issue/PR: approach + main risk |
-| Medium, mostly reversible, few components | Lightweight design doc | `assets/design-doc.md`: motivation, design, alternatives, impact, risks, observability |
+| Medium, mostly reversible, few components | Lightweight design doc | `assets/design-doc.md`: summary, motivation, design, alternatives, impact, risks, observability |
 | Large, breaking, or hard to reverse | Full RFC | `assets/rfc.md`: summary, motivation, current state, design, alternatives, drawbacks, prior art, impact, migration, rollout, rollback, risks, observability — circulated for review |
 
 ## Workflow

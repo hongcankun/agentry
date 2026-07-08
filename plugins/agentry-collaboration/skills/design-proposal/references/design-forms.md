@@ -9,7 +9,7 @@ Size the change first, then pick the lightest artifact that still lets a reviewe
 | Tier | Change looks like | Artifact | Must cover |
 | --- | --- | --- | --- |
 | **Inline note** | Small, reversible, one component; the approach is obvious once stated | A paragraph in the issue or PR | Chosen approach + the one risk worth naming |
-| **Lightweight design doc** | Medium; a few components; mostly reversible; one or two real alternatives | `assets/design-doc.md` | Motivation, design, alternatives, impact, main risks, observability |
+| **Lightweight design doc** | Medium; a few components; mostly reversible; one or two real alternatives | `assets/design-doc.md` | Summary, motivation, design, alternatives, impact, main risks, observability |
 | **Full RFC** | Large, breaking, hard to reverse, or cross-team | `assets/rfc.md`, circulated for review | Summary, motivation, current state, design, alternatives, drawbacks, prior art, impact, migration, rollout, rollback, risks, observability |
 
 Two forces set the tier: **size** (how many components and people the change touches) and **reversibility** (how cheaply a wrong decision can be undone). A large but trivially reversible change can stay light; a small but irreversible one (a public API shape, a data migration, a wire format) earns a full RFC. When the two disagree, let reversibility win — the cost of being wrong is what a design guards against.
@@ -85,4 +85,3 @@ A repo usually accumulates many designs across the tiers. A few agnostic convent
 - **Keep them discoverable and consistently named.** Land designs in one agreed place with a predictable naming scheme, and index them (a list of designs and their status) so the set is navigable without opening each file. The exact directory, numbering, and index format are a project convention, not part of this skill.
 - **Supersede, do not delete.** When a later design replaces an earlier one, mark the old one *superseded* and link forward to its replacement rather than deleting it; the trail of decisions is part of the record.
 - **Link to the request.** Each design points back to the accepted change request it answers (the **Answers** field), so a reader can trace How back to Why.
-
