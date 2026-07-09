@@ -47,10 +47,7 @@ Optional:
 - `metadata`: Arbitrary key-value mapping for additional metadata.
 - `allowed-tools`: Space-separated string of pre-approved tools the skill may use. (Experimental)
 
-Write `description` so it states:
-- what the skill is;
-- what capabilities it provides;
-- when it should be used.
+Write `description` so it states what the skill does and when to use it.
 
 ## Authoring principles
 

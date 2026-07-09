@@ -47,7 +47,7 @@
     {
       "name": "agentry-authoring",
       "description": "Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "category": "authoring",
       "keywords": ["skills", "subagents", "commands", "rules", "prompts", "plugins", "content-review"],
       "skills": ["skill-manager", "subagent-manager", "command-manager", "rule-manager", "prompt-template-manager", "plugin-manager", "authoring-review"],
