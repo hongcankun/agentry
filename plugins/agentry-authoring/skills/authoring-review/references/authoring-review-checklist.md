@@ -46,10 +46,10 @@ Use this checklist to review AI agent extension content and related documentatio
 
 ## Trigger Quality
 
-- Skills describe what they can do and when to use them.
-- Commands describe explicit user-invoked workflows and expected arguments.
-- Rules define always-on policy without duplicating full procedural skills.
-- Subagents use noun-based role names, concrete delegation triggers, minimal tools, and a clear output contract.
+- Skills describe what they can do and when to use them, and are named as a capability/activity noun phrase (`code-review`), never the actor-noun form.
+- Commands describe explicit user-invoked workflows and expected arguments, and are named as an imperative verb-object (`review-code`).
+- Rules define always-on policy without duplicating full procedural skills, and rule files are named for their policy/topic as a noun.
+- Subagents use noun-based role names (`code-reviewer`), concrete delegation triggers, minimal tools, and a clear output contract.
 
 ## Final Review
 

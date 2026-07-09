@@ -12,6 +12,7 @@ Use this checklist when reviewing an AI agent command file or command package.
 ## Naming and Metadata
 
 - The invocation name is kebab-case and stable.
+- The invocation name reads as an imperative verb-object (`review-code`), not a skill's capability noun (`code-review`) or a subagent's actor noun (`code-reviewer`).
 - The filename matches the intended invocation name or the target tool's naming convention.
 - Frontmatter is valid for the target tool.
 - The description is short, user-facing, and specific.

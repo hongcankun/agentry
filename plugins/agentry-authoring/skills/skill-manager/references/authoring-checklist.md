@@ -7,6 +7,7 @@ Use this checklist before delivering a skill.
 - `SKILL.md` exists.
 - YAML frontmatter is valid.
 - `name` uses kebab-case.
+- `name` is a domain-first capability/activity noun phrase (`code-review`), not the actor-noun form that names a subagent (`code-reviewer`).
 - `description` states what the skill does and when to use it, with no embedded step-by-step workflow.
 - No unsupported metadata fields are present.
 

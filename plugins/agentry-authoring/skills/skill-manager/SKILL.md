@@ -45,7 +45,7 @@ Build the skill around this structure:
 └── ...           # other files only when clearly necessary
 ```
 
-Use kebab-case for the skill name directory and metadata `name`.
+Use kebab-case for the skill name directory and metadata `name`. Name a skill for the capability or activity it provides, as a domain-first noun phrase (`code-review`, `pdf-processing`, `test-engineering`); a pure reference skill may be a plain noun (`git-workflow`). Never use the actor-noun (`-er`/`-or`) form — that names a subagent (`code-reviewer`), not a skill.
 
 ## Workflow
 
