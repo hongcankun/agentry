@@ -7,6 +7,7 @@ This directory stores design proposals for accepted changes. A design proposal m
 | ID | Form | Title | Status | Answers |
 | --- | --- | --- | --- | --- |
 | 0001 | RFC | [Behavioral Evaluation for Authoring Artifacts](./0001-behavioral-evaluation-authoring-artifacts.md) | Accepted | [#85](https://github.com/hongcankun/agentry/issues/85) |
+| 0002 | RFC | [Rename Non-Conforming Artifacts to the Naming Convention](./0002-rename-nonconforming-artifacts.md) | Accepted | [#92](https://github.com/hongcankun/agentry/issues/92) |
 
 ## Convention
 
