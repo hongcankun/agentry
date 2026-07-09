@@ -49,6 +49,12 @@ Optional:
 
 Write `description` so it states what the skill does and when to use it.
 
+## Naming form
+
+Name a skill for the capability or activity it provides, as a domain-first noun phrase: `code-review`, `pdf-processing`, `test-engineering`. A pure reference skill may be a plain topic noun (`git-workflow`). Keep it kebab-case and distinct from neighboring artifact types: a subagent uses an actor noun (`code-reviewer`), a command uses an imperative verb-object (`review-code`), and a rule uses a policy/topic noun. Never give a skill the actor-noun (`-er`/`-or`) form — that reads as a subagent and blurs the skill/agent line.
+
+A skill and a rule are both nouns, so grammar alone does not separate them: a skill names a capability the agent applies on request, while a rule names a policy or topic that always holds. Distinguish them by that sense, not by form.
+
 ## Authoring principles
 
 - Prefer clarity over cleverness.

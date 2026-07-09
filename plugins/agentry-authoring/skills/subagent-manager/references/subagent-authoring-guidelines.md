@@ -12,7 +12,7 @@ Guidance for writing focused, reliable AI subagents.
 
 ## Naming the subagent
 
-Name the subagent with a **noun that names the role or doer**, not a verb phrase that names the action. A subagent is an actor the main agent delegates to, so `code-reviewer`, `test-runner`, or `security-auditor` read naturally; `code-review` or `run-tests` do not. Keep it kebab-case and unique. This is the opposite emphasis from skills and rules, which name a capability or policy — an agent names *who* does the work.
+Name the subagent with a **noun that names the role or doer**, not a verb phrase that names the action. A subagent is an actor the main agent delegates to, so `code-reviewer`, `test-runner`, or `security-auditor` read naturally; `code-review` or `run-tests` do not. Keep it kebab-case and unique. This is the opposite emphasis from the neighboring artifact types: a skill names a capability (`code-review`), a command names an imperative action (`review-code`), and a rule names a policy or topic — an agent names *who* does the work.
 
 ## Writing the description
 

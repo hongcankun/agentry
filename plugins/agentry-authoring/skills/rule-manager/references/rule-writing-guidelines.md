@@ -18,6 +18,7 @@ Guidance for writing clear, scoped, conflict-free agent rules.
 
 ## Structure
 
+- Name a modular rule file for its policy or topic as a noun (`code-style`, `commit-conventions`), even though the rules inside stay imperative. This keeps rule files distinct from a skill's capability noun, a command's imperative verb-object, and a subagent's actor noun.
 - Group related rules under headings (e.g. "Style", "Testing", "Git").
 - Order rules from most general to most specific.
 - Keep the file short. A long rule file is often ignored; move rarely-needed detail elsewhere or drop it.

@@ -29,6 +29,7 @@ Use this checklist when reviewing an agent rule file.
 
 ## Format
 
+- A modular rule file is named for its policy/topic as a noun (`code-style`), not as an action or role, while the rules inside stay imperative.
 - The file is in the correct scope location (project repo vs. user/global home config dir).
 - The file matches the project's existing rule convention (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/`, `.claude/rules/`, `.trae/rules/`).
 - Modular rule files include the correct frontmatter for the tool (`globs`/`alwaysApply` for Cursor and Trae; `paths` for Claude Code); root files have none.

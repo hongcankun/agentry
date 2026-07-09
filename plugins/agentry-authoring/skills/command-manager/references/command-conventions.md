@@ -7,6 +7,7 @@ Conventions change by tool. Always inspect the target repo or user config first 
 ## Common Design
 
 - Use kebab-case command names.
+- Name the command as an imperative verb-object (`review-code`, `write-pr`), matching the action the user invokes. This keeps it distinct from a skill's capability noun (`code-review`) and a subagent's actor noun (`code-reviewer`).
 - Prefer one workflow per command.
 - Include a short description when the tool supports metadata.
 - Document arguments in the command body or frontmatter.
