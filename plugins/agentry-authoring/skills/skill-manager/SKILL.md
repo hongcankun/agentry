@@ -9,7 +9,7 @@ Create, update, or review an Agent Skill: a portable folder centered on `SKILL.m
 
 Follow these conventions:
 - Keep the skill lightweight. Put only the core guidance in `SKILL.md`.
-- Use metadata for discovery: `name` and `description` must clearly tell the agent what the skill is, what it can do, and when to use it.
+- Use metadata for discovery: `name` and `description` must clearly tell the agent what the skill does and when to use it.
 - Use progressive disclosure: keep detailed docs in `references/`; keep deterministic or repeatable logic in `scripts/`.
 - Package the skill as a self-contained folder that another agent can use without hidden context.
 
@@ -58,7 +58,7 @@ Then clarify the skill boundary:
 - the concrete capabilities it should provide;
 - the situations that should trigger the skill.
 
-Write the description so it includes all three points in one compact sentence.
+Write the description so it states what the skill does and when to use it in one compact sentence, not the step-by-step workflow. See `references/skill-writing-craft.md` for why and for the rest of the craft guidelines.
 
 ### 2. Initialize or inspect the skill folder
 
@@ -88,7 +88,7 @@ Use this rule:
 - Put deterministic logic or reusable automation in `scripts/`.
 - Put templates, static resources, or output materials in `assets/`.
 
-Avoid duplication between `SKILL.md` and `references/`.
+Avoid duplication between `SKILL.md` and `references/`, and keep references one level deep so an agent reads complete files rather than chasing a chain of pointers. See `references/skill-writing-craft.md` for content-placement craft, including how prescriptive to make an instruction.
 
 ### 5. Validate the package
 
@@ -116,6 +116,8 @@ At minimum confirm:
 - references add depth without repeating the main instructions;
 - the skill is portable and does not rely on hidden local context.
 
+This review checks authoring quality. Proving that a skill change actually improved agent behavior on real tasks is a separate downstream evaluation stage.
+
 ## Output requirements
 
 Deliver a skill folder that:
@@ -128,4 +130,5 @@ Deliver a skill folder that:
 
 Read these files when needed:
 - `references/convention-summary.md` — compact summary of the Agent Skills convention and design principles.
+- `references/skill-writing-craft.md` — craft guidance for descriptions, concision, guidance form, examples, terminology, and organizing references.
 - `references/authoring-checklist.md` — final review checklist for quality and portability.
