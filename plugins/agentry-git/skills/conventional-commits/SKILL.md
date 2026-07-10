@@ -36,7 +36,7 @@ A Conventional Commit message has the following structure:
 
 ### Type (required)
 
-Must be one of:
+`feat` and `fix` are the only types the spec defines; other types MAY be used and carry no implicit SemVer effect. These are the common, recommended types (prefer an existing one over inventing new vocabulary):
 - `feat`: A new feature
 - `fix`: A bug fix
 - `docs`: Documentation only changes
@@ -44,7 +44,10 @@ Must be one of:
 - `refactor`: A code change that neither fixes a bug nor adds a feature
 - `perf`: A code change that improves performance
 - `test`: Adding missing tests or correcting existing tests
-- `chore`: Changes to the build process or auxiliary tools and libraries such as documentation generation
+- `build`: Changes to the build system or external dependencies
+- `ci`: Changes to CI configuration files and scripts
+- `chore`: Other changes that do not modify source or test files
+- `revert`: Reverts a previous commit
 
 ### Scope (optional)
 
@@ -52,7 +55,7 @@ A noun describing a section of the codebase surrounded by parenthesis, e.g., `fi
 
 ### Description (required)
 
-A short, imperative, present tense description of the change. Do not capitalize the first letter. No dot (.) at the end. Keep the subject line short (around 50 characters, 72 max).
+A short, imperative, present tense description of the change. Do not capitalize the first letter. No dot (.) at the end. Keep the subject line short: aim for around 50 characters and treat 72 as the hard ceiling (matching Git's terminal-friendly convention). `scripts/validate_commit_message.py` fails a subject line longer than 72.
 
 ### Body (optional)
 

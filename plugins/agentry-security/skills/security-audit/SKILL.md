@@ -57,11 +57,11 @@ Deliver the audit in the format under **Output**. Every finding gets a concrete,
 
 ## Output
 
-Default to a structured audit report with:
-- a **scope & threat model summary**: what was audited, the assets and attackers considered, and the trust boundaries — so the reader knows what the rating is relative to;
-- **findings grouped by severity**, each with: `location` (`file:line` or component) + vulnerability class + the exploit scenario (untrusted source → path → sink → impact) + a concrete remediation (show vulnerable → fixed code when it clarifies the fix);
-- **validation evidence** when tools or tests were run (what confirmed the finding);
-- a **risk summary table** (severity → count) and an explicit overall posture verdict (e.g. critical exposure / needs remediation / acceptable with noted hardening).
+Default to a structured audit report with four parts — see `references/risk-rating-and-reporting.md` for the exact finding format and report structure:
+- a **scope & threat model summary** — what was audited and the assets, attackers, and trust boundaries the rating is relative to;
+- **findings grouped by severity**, each with location, vulnerability class, exploit scenario, and a concrete remediation;
+- **validation evidence** when tools or tests were run;
+- a **risk summary table** (severity → count) and an explicit overall posture verdict.
 
 Acknowledge meaningful defenses already in place, not only weaknesses. If you find no exploitable issues, say so plainly and report the residual hardening opportunities (if any) as Info — do not manufacture findings.
 

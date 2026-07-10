@@ -2,6 +2,8 @@
 
 Use these recipes for common test-engineering tasks. They are intentionally framework-agnostic: first follow local project conventions, then adapt the steps to the test runner and fixtures already in use.
 
+`test-design.md` owns the rationale for choosing test levels, using mocks, keeping tests deterministic, and treating coverage as a signal rather than a target. These recipes are the procedural companion; consult that rationale instead of re-deriving it here.
+
 ## Add a regression test
 
 1. Identify the externally visible behavior that failed.

@@ -62,7 +62,7 @@ If the environment allows, run the project's checks to ground the review in evid
 
 ### 5. Filter findings through the pre-report gate
 
-Pass each candidate finding through the gate in `references/false-positives.md`, and drop or downgrade anything that does not clear it. Report only findings you are confident are real problems; skip the common false positives listed there. High/Critical findings require proof: the exact snippet and why existing guards don't catch it.
+Pass each candidate finding through the gate in `references/false-positives.md`, and drop or downgrade anything that does not clear it. Report only findings you are confident are real problems; skip the common false positives listed there. That gate also sets the extra proof bar for High/Critical findings.
 
 ### 6. Classify and prioritize findings
 

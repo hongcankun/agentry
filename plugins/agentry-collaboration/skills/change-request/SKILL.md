@@ -42,7 +42,7 @@ Classify the ask before writing or judging it — each type emphasizes different
 | Something is broken | Bug Report | "What is not working?" |
 | Improve internal quality, behavior unchanged | Refactor Proposal | "What blocks maintenance or evolution?" |
 
-A change request is a Why-focused input: it states the problem and the desired outcome. Deciding *how* to build an accepted request, and directing a human or agent to execute it, is a separate downstream stage this skill does not cover.
+A change request is a Why-focused input: it states the problem and the desired outcome, not how to build it. See `references/request-types.md` for how the request hands off downstream.
 
 ## Workflow
 

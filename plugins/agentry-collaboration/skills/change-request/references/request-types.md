@@ -12,7 +12,7 @@ Each type shares the rubric (Why-not-How, quantified pain, result-oriented accep
 | **Bug Report** | Something behaves wrong | Reproduction steps + logs | Making it reproducible | Can we reproduce it, how bad is it? |
 | **Refactor Proposal** | Improve internals, behavior unchanged | Quantified maintenance pain + blast radius | Proving no regression | Is the risk controlled, is it worth it? |
 
-All three share the rubric and differ only in which fields they emphasize; see "Downstream" below for why the executor does not add a fourth type.
+All three share the rubric and differ only in which fields they emphasize. There is no fourth type for who executes it: a human contributor and an AI agent both work from the same request.
 
 ### Boundary cases
 

@@ -45,12 +45,9 @@ Decision guidance, the rebase workflow, and squash-on-merge: `references/merge-v
 
 ## Conflict resolution
 
-1. Run the merge or rebase and read which files conflict.
-2. Open each file and resolve markers (`<<<<<<<`, `=======`, `>>>>>>>`) by understanding both sides, not by reflexively keeping one.
-3. Test, then stage resolved files and continue (`git rebase --continue` or commit the merge).
-4. If unsure, prefer `git merge --abort` / `git rebase --abort` over guessing.
+Resolve each conflicted file by understanding both sides, never by reflexively keeping one. If unsure, prefer `git merge --abort` / `git rebase --abort` over committing a guessed resolution.
 
-Details and tooling: `references/conflict-resolution.md`.
+Full procedure, tooling, and prevention: `references/conflict-resolution.md`.
 
 ## Operational rules
 

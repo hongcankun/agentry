@@ -11,7 +11,6 @@ Follow these principles:
 - Give each plugin a coherent theme; bundle components that are installed and used together.
 - Keep the manifest minimal and accurate: name, description, and version are what users see and pin to.
 - Put component directories (`skills/`, `agents/`, …) at the plugin root; keep only the manifest inside the tool's `.<tool>-plugin/` directory.
-- Note that plugins typically do not deliver **rules**; plan how rules ship separately if the plugin has them.
 - In a marketplace, give every plugin a unique kebab-case name and a clear description, and validate before publishing.
 
 ## When to use
@@ -57,7 +56,7 @@ Detect the **target tool** (Claude Code, Trae CLI, ...) from existing plugin or 
 For a plugin, clarify:
 - the theme that ties its components together;
 - which components it bundles and which it deliberately leaves out;
-- whether it has associated rules and, if so, how they will be installed (since the plugin format will not deliver them).
+- whether it has associated rules and, if so, how they will be installed.
 
 If the components do not share a theme, split them into separate plugins.
 
@@ -91,7 +90,7 @@ At minimum confirm:
 - component directories are at the plugin root and recognized by the tool's validator;
 - the marketplace catalog is at the correct location with each `source` resolvable;
 - the `owner`/author shape matches the target tool;
-- any rules the plugin relates to have a documented install path, since the plugin will not ship them.
+- any rules the plugin relates to have a documented install path.
 
 ## References
 

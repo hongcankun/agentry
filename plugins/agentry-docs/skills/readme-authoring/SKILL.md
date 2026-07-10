@@ -28,17 +28,11 @@ If details are missing, infer them from the repository structure and existing fi
 
 ## Standard README sections
 
-Use only the sections that serve the project and audience:
-1. **Project Title**: Clear, concise name of the project.
-2. **Description**: Brief overview of what the project does and why it exists.
-3. **Features**: Key capabilities that are supported by the repository.
-4. **Requirements**: Runtime, tooling, credentials, or platform prerequisites.
-5. **Installation**: Commands or steps users actually need.
-6. **Usage**: Minimal examples for the common path.
-7. **Configuration**: Required environment variables, files, or options.
-8. **Development and Testing**: Contributor setup and verification commands.
-9. **Contributing**: Contribution workflow or link to the contributor guide.
-10. **License**: License name or link when present.
+`assets/README-template.md` is the canonical section set. Include only the sections that serve the project and audience; omit the rest.
+
+Non-obvious selection guidance:
+- **Features**: list capabilities the repository actually supports, never planned or aspirational ones.
+- Keep **Requirements** (prerequisites needed before install) distinct from **Configuration** (settings the user provides after install, such as environment variables or config files).
 
 ## Workflow
 
