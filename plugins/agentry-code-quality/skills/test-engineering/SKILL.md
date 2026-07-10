@@ -1,6 +1,6 @@
 ---
 name: test-engineering
-description: Write, update, debug, and review automated test code by identifying behavior to cover, matching the project's test framework and style, adding focused assertions or fixtures, and validating the result. Use when the user asks to add tests, improve coverage, fix failing tests, review test code, or design a testing plan.
+description: Write, update, debug, and review automated tests that cover meaningful behavior and match the project's test conventions. Use when the user asks to add tests, improve coverage, fix failing or flaky tests, review test code, or design a testing plan.
 ---
 
 # Test Engineering

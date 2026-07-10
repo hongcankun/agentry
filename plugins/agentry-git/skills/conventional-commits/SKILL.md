@@ -1,6 +1,6 @@
 ---
 name: conventional-commits
-description: Create commits that follow the Conventional Commits specification, including selecting appropriate types, writing clear descriptions, and validating commit messages. Use when a user asks to create a commit, update a commit message, or ensure commits follow conventional commits.
+description: Create commits that follow the Conventional Commits specification. Use when a user asks to create a commit, update a commit message, or ensure commits follow conventional commits.
 ---
 
 # Conventional Commits

@@ -1,6 +1,6 @@
 ---
 name: integrated-review
-description: Coordinate a multi-track review of a bounded change by establishing scope, selecting relevant code/security/test/validation tracks, delegating to specialist subagents or skills when available, consolidating findings, and reporting evidence-backed risks and verdicts.
+description: Coordinate a multi-track review of a bounded change and synthesize code, security, test, and validation concerns into one consolidated assessment with a verdict. Use when a user wants a combined pre-merge or pre-release review of a local change, branch, commit range, PR/MR, selected files, or diff, or wants consolidated findings and a gate decision across multiple review concerns.
 ---
 
 # Integrated Review

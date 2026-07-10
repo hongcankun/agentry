@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Apply git workflow best practices, including choosing a branching strategy, writing commits and pull requests, performing merges and rebases safely, resolving conflicts, and managing releases and tags. Use when a user asks how to structure git work, set up a branching model, review a workflow, or carry out git operations like rebasing, merging, or releasing.
+description: Apply git workflow best practices across branching strategies, commit and pull request conventions, merge vs rebase decisions, conflict resolution, and releases and tags. Use when a user asks how to structure git work, set up a branching model, review a workflow, or carry out git operations like rebasing, merging, or releasing.
 ---
 
 # Git Workflow

@@ -1,6 +1,6 @@
 ---
 name: skill-authoring
-description: Create, update, or review Agent Skills that follow the open Agent Skills convention, including planning skill scope, writing SKILL.md metadata and instructions, organizing scripts references and assets, and validating the final package. Use when a user asks to create a new skill, turn a repeatable workflow into a reusable skill, extend an existing skill, or review and fix a skill folder.
+description: Create, update, or review Agent Skills that follow the open Agent Skills convention — a portable SKILL.md folder with optional scripts, references, and assets. Use when a user asks to create a new skill, turn a repeatable workflow into a reusable skill, extend an existing skill, or review and fix a skill folder.
 ---
 
 # Skill Authoring

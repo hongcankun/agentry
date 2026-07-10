@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Perform a focused security audit of code or a codebase — map the attack surface and trust boundaries, hunt for vulnerability classes (injection, auth flaws, SSRF, secrets, weak crypto, and more), rate each finding by likelihood and impact, and report exploit scenarios with concrete remediations. Use when a user asks for a security review, security audit, threat assessment, or vulnerability hunt of code they own or are authorized to test.
+description: Perform a threat-driven security audit of code or a codebase to find real, exploitable vulnerabilities across classes like injection, auth/authz flaws, SSRF, secrets exposure, and weak crypto. Use when a user asks for a security review, security audit, threat assessment, or vulnerability hunt of code they own or are authorized to test.
 ---
 
 # Security Audit
