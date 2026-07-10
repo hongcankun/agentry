@@ -1,9 +1,9 @@
 ---
-name: subagent-manager
+name: subagent-authoring
 description: Create, update, or review AI subagents (specialized agents an AI coding tool delegates tasks to) across tools like Claude Code, Cursor, OpenCode, Trae CLI, and Codex, including defining the agent's role and trigger conditions, writing a focused system prompt, scoping tools and model, choosing the right scope, and reviewing agents for clarity and overlap. Use when a user asks to create a new subagent, edit an existing one, or review agent definition files such as .claude/agents/, .cursor/agents/, .opencode/agents/, .trae/agents/, or .codex/agents/.
 ---
 
-# Subagent Manager
+# Subagent Authoring
 
 Create, update, or review **AI subagents**: specialized agents an AI coding tool can delegate a task to, each with its own focused system prompt, tool access, and isolated context window. Across tools (Claude Code, Cursor, OpenCode, Trae CLI, Codex, and others), a subagent is a Markdown file with YAML frontmatter; the frontmatter holds metadata and the body is the agent's system prompt. The directory and a few frontmatter fields differ per tool.
 

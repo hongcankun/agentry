@@ -1,9 +1,9 @@
 ---
-name: plugin-manager
+name: plugin-authoring
 description: Create, update, or review plugins and plugin marketplaces for AI coding tools like Claude Code and Trae CLI, including defining a plugin's components (skills, subagents, commands, hooks, MCP servers), writing the plugin manifest, organizing the directory layout, assembling a marketplace catalog, and reviewing plugins for validity and overlap. Use when a user asks to create a new plugin or marketplace, edit an existing one, or review plugin files such as .claude-plugin/plugin.json, .claude-plugin/marketplace.json, .trae-plugin/marketplace.json, or traecli.toml.
 ---
 
-# Plugin Manager
+# Plugin Authoring
 
 Create, update, or review **plugins** and **plugin marketplaces** for AI coding tools. A plugin is an installable package that bundles components — skills, subagents, slash commands, hooks, MCP servers, and (tool-dependent) model and tool-permission config — so they can be shared and versioned. A marketplace is a catalog that distributes plugins. Across tools (Claude Code, Trae CLI, and others), a plugin is a directory of component folders plus a manifest, and a marketplace is a `marketplace.json` catalog; the manifest file, catalog location, and a few fields differ per tool.
 

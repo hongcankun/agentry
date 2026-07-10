@@ -42,7 +42,7 @@ When changing extensions or plugin membership:
 
 Plugin README files should stay concise: purpose, when to install, component table, and install commands that distinguish direct marketplace installs from `scripts/agentry.py`.
 
-For each new or changed extension artifact, use the matching `agentry-authoring` skill (`skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, or `plugin-manager`) and follow that skill's validation. Do not call a skill's private helper scripts directly from here.
+For each new or changed extension artifact, use the matching `agentry-authoring` skill (`skill-authoring`, `subagent-authoring`, `command-authoring`, `rule-authoring`, or `plugin-authoring`) and follow that skill's validation. Do not call a skill's private helper scripts directly from here.
 
 ## Dogfooding
 

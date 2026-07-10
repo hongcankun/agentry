@@ -1,9 +1,9 @@
 ---
-name: rule-manager
+name: rule-authoring
 description: Create, update, or review agent rules that guide AI agent behavior, at project scope or user/global scope, including defining scope and triggers, writing clear and actionable directives, organizing rule files, and reviewing rules for clarity and conflicts. Use when a user asks to create a new agent rule, update existing rules, or review rule files such as CLAUDE.md, AGENTS.md, .cursor/rules, .claude/rules, or ~/.claude/rules and ~/.trae rules.
 ---
 
-# Rule Manager
+# Rule Authoring
 
 Create, update, or review **agent rules**: the instruction files that tell an AI agent how to behave. Rules can be **project-scoped** (in the repo, e.g. `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/`, `.claude/rules/`, `.trae/rules/`) or **user/global-scoped** (in the home config dir, e.g. `~/.claude/CLAUDE.md`, `~/.claude/rules/`, `~/.trae/AGENTS.md`).
 

@@ -13,12 +13,12 @@
     {
       "name": "agentry-code-quality",
       "description": "Code review, integrated review orchestration, test-engineering, review publishing, and specialist subagents that catch correctness, security, maintainability, and test-quality issues with actionable guidance.",
-      "version": "0.12.5",
+      "version": "0.13.0",
       "category": "code-quality",
       "keywords": ["code-review", "testing", "test-engineering", "coverage", "security", "subagent", "code-style"],
       "skills": ["code-review", "test-engineering", "review-publishing", "integrated-review"],
       "agents": ["code-reviewer", "test-engineer"],
-      "commands": ["review-code", "review-pr", "improve-tests", "quality-gate", "publish-review"],
+      "commands": ["review-code", "review-pr", "improve-tests", "run-quality-gate", "publish-review"],
       "rules": ["code-quality/code-review.md", "code-quality/code-style.md", "code-quality/testing.md"],
       "skillReferences": { "code-review": ["code-quality/code-style.md"] }
     },
@@ -47,10 +47,10 @@
     {
       "name": "agentry-authoring",
       "description": "Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.4.2",
+      "version": "0.5.0",
       "category": "authoring",
       "keywords": ["skills", "subagents", "commands", "rules", "prompts", "plugins", "content-review"],
-      "skills": ["skill-manager", "subagent-manager", "command-manager", "rule-manager", "prompt-template-manager", "plugin-manager", "authoring-review"],
+      "skills": ["skill-authoring", "subagent-authoring", "command-authoring", "rule-authoring", "prompt-template-authoring", "plugin-authoring", "authoring-review"],
       "agents": ["authoring-reviewer"],
       "commands": ["review-authoring"],
       "rules": ["authoring/authoring-review.md"]
@@ -58,10 +58,10 @@
     {
       "name": "agentry-docs",
       "description": "Lightweight documentation authoring for software repositories, currently focused on accurate README creation and maintenance.",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "category": "documentation",
       "keywords": ["readme", "documentation"],
-      "skills": ["readme-manager"],
+      "skills": ["readme-authoring"],
       "agents": [],
       "commands": ["update-readme"],
       "rules": []

@@ -3,7 +3,7 @@ description: Run an integrated pre-merge gate covering the review tracks and val
 argument-hint: "[change target or intent]"
 ---
 
-# Quality Gate
+# Run Quality Gate
 
 Use this command when the user wants a consolidated pre-merge assessment of a bounded change before it is shipped, merged, or handed off for review.
 

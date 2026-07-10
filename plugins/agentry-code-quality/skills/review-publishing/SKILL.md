@@ -18,7 +18,7 @@ Core rules:
 ## When to use
 
 Use this skill when the task is to:
-- publish existing code-review, integrated-review, security-audit, test-review, or quality-gate findings;
+- publish existing code-review, integrated-review, security-audit, test-review, or run-quality-gate findings;
 - draft inline comments or a summary comment for a PR, MR, code review, or equivalent review surface;
 - deduplicate and map findings to review comments;
 - prepare comments in `draft only`, `summary only`, or `inline only` mode;
@@ -28,7 +28,7 @@ Use this skill when the task is to:
 
 Gather as much of the following as available:
 - the review target: PR/MR URL or number, branch, repository, review id, selected context, or plain-language target;
-- existing findings: prior review output, integrated-review or quality-gate report, audit report, test review notes, pasted findings, selected text, or generated report;
+- existing findings: prior review output, integrated-review or run-quality-gate report, audit report, test review notes, pasted findings, selected text, or generated report;
 - publication intent: `draft only`, `summary only`, `inline only`, `publish`, `post now`, `publish without another confirmation`, or `do not publish`;
 - existing-thread mode: whether the user explicitly allows replying to or updating equivalent existing threads in the same publish pass;
 - comment volume preferences: explicit comment budget, grouped vs. one-comment-per-finding behavior, and whether to publish all draft comments when many are similar;
@@ -44,13 +44,13 @@ Identify the review target and platform from the provided URL, number, branch, s
 
 Detect only the capabilities needed to publish comments: review metadata, base/head revisions, changed files, diff positions, comment actions, pending review or draft batch support, and review-status actions. When available, record the review version or patchset, head branch and commit, and base branch and commit for the summary `_Source:_` footer's structured `key=value` fields. Treat URL query parameters such as review version, checked commit SHA, or checked commit number as reviewed-revision metadata only.
 
-Do not query PR/MR checks, workflow, pipeline, or check-run status by default, including when the review URL contains checked-commit parameters. Include that status only when the user explicitly asks for CI context, quality-gate coverage, or pipeline investigation, or when CI failure analysis is already part of the supplied findings.
+Do not query PR/MR checks, workflow, pipeline, or check-run status by default, including when the review URL contains checked-commit parameters. Include that status only when the user explicitly asks for CI context, run-quality-gate coverage, or pipeline investigation, or when CI failure analysis is already part of the supplied findings.
 
 Do not read existing review discussion while resolving the target unless the user's supplied findings already depend on a specific thread. Do not prefetch comments in parallel with metadata, changed files, or diff collection. Keep discussion content out of the findings-gathering context so earlier comments do not bias or substitute for independent review evidence.
 
 ### 2. Gather existing findings
 
-Use findings from the conversation, selected text, files, or prior outputs such as `review-code`, `audit-security`, `improve-tests`, `integrated-review`, or `quality-gate`.
+Use findings from the conversation, selected text, files, or prior outputs such as `review-code`, `audit-security`, `improve-tests`, `integrated-review`, or `run-quality-gate`.
 
 Do not invent findings or run a fresh broad review by default. If no concrete findings are available, stop and ask the user to provide findings or run a review/gate workflow first.
 

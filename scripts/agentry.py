@@ -174,7 +174,7 @@ PLUGIN_REMOVE_ACTION_TAGS = {"would remove", "removed"}
 
 # Per-tool target directory for each component, relative to the project root
 # (project scope) or the home directory (global scope). Kept in sync with the
-# rule-manager, subagent-manager, and command-manager skill conventions.
+# rule-authoring, subagent-authoring, and command-authoring skill conventions.
 TOOL_TARGETS = {
     "claude": {
         "skills": ".claude/skills",

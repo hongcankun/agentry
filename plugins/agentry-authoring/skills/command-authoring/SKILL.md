@@ -1,9 +1,9 @@
 ---
-name: command-manager
+name: command-authoring
 description: Create, update, or review AI agent commands across tools like Claude Code, Trae CLI, Cursor, and Codex, including defining command purpose, arguments, prompt body, file placement, metadata, and validation. Use when a user asks to create a slash command, edit an existing command, or review command files such as .claude/commands/, .trae/commands/, .cursor/commands/, or plugin commands/.
 ---
 
-# Command Manager
+# Command Authoring
 
 Create, update, or review **AI agent commands**: reusable command definitions that users invoke explicitly, often as slash commands, to run a focused agent workflow with optional arguments or selected context. Commands are usually Markdown files with YAML frontmatter or tool-specific metadata plus a prompt body. Their file locations, argument syntax, and namespacing differ by tool.
 
