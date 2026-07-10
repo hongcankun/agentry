@@ -24,6 +24,10 @@ Describe the shortest reliable setup path for the common user.
 project-command --help
 ```
 
+## Configuration
+
+List required environment variables, config files, or options, along with their defaults, when applicable.
+
 ## Development
 
 Include contributor setup, validation commands, or links to contributor docs when applicable.

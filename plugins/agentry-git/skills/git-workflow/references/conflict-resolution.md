@@ -6,22 +6,12 @@ Resolve merge and rebase conflicts deliberately.
 
 1. Start the integration (`git merge <branch>` or `git rebase <branch>`).
 2. Run `git status` to see which files conflict.
-3. Open each conflicted file. Conflict markers look like:
-
-   ```
-   <<<<<<< HEAD
-   current branch content
-   =======
-   incoming content
-   >>>>>>> other-branch
-   ```
-
-4. Edit to the correct combined result and remove all markers.
-5. Stage resolved files with `git add <file>`.
-6. Continue:
+3. Open each conflicted file. Understand both sides before resolving — do not reflexively keep one. Edit to the correct combined result and remove all markers.
+4. Stage resolved files with `git add <file>`.
+5. Continue:
    - Rebase: `git rebase --continue`
    - Merge: commit the merge (`git commit`).
-7. Run tests to confirm the resolution is correct.
+6. Run tests to confirm the resolution is correct.
 
 ## Tools
 

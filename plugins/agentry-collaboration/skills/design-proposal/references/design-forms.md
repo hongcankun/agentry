@@ -43,7 +43,7 @@ code / PR                             (the built change)          ← implementa
 | Decision it seeks | Accept / reject the ask | Accept / revise / reject the approach |
 | Owner of the answer | Whoever prioritizes the work | Whoever will design or build it |
 
-The handoff is explicit: a design proposal **quotes and links** the accepted request, restates the problem and desired outcome in a sentence or two, and then spends its length on the solution. It does not re-argue whether the work is worth doing — that decision is already made. If you find yourself justifying the need, you have drifted back into the Why, which the change request already settled.
+The handoff is explicit: a design proposal **quotes and links** the accepted request, restates the problem and desired outcome in a sentence or two, and then spends its length on the solution — not on re-arguing whether the work is worth doing.
 
 ### Design proposal vs PRD — how vs what-and-why-committed
 

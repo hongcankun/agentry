@@ -5,7 +5,7 @@ description: Create, update, or review reusable prompt templates for AI chat or 
 
 # Prompt Template Authoring
 
-Create, update, or review reusable prompt templates for AI chat or AI agents, ensuring they are clear, actionable, and easy to customize with variables.
+Create, update, or review reusable prompt templates for AI chat or AI agents.
 
 ## When to use
 
@@ -26,17 +26,6 @@ Provide as much of the following as available:
 
 If important details are missing, ask clarifying questions or infer reasonable defaults.
 
-## Prompt template structure
-
-A good prompt template should include:
-1. **Purpose/Goal**: A clear statement of what the template is for.
-2. **Context/Background**: Any necessary background information the AI needs.
-3. **Instructions**: Step-by-step directions for the AI to follow.
-4. **Variables**: Placeholders for dynamic content (e.g., {{user_input}}, {{context}}).
-5. **Examples (optional)**: Sample inputs and outputs to illustrate the desired behavior.
-6. **Constraints (optional)**: Rules or limitations the AI must follow (e.g., "keep responses under 100 words").
-7. **Output Format (optional)**: Desired structure of the AI's response (e.g., JSON, markdown).
-
 ## Workflow
 
 ### 1. Define the template's purpose and scope
@@ -46,12 +35,8 @@ Clarify:
 - What are the key variables or dynamic inputs the template needs to accept?
 
 ### 2. Draft the core content
-Write the template content, including:
-- A clear purpose/goal statement.
-- Any necessary context/background.
-- Step-by-step instructions for the AI.
-- Placeholders for variables (use {{variable_name}} syntax).
-- Optional examples, constraints, and output format.
+
+Write the template following the section structure in `references/prompt-best-practices.md`. Use the `{{variable_name}}` syntax for placeholders.
 
 ### 3. Add examples and test cases
 Include 1-3 examples of:
@@ -73,4 +58,5 @@ Save the prompt template as a markdown file in the `assets/` directory (or provi
 
 Read these files when needed:
 - `references/prompt-best-practices.md` — best practices for writing effective prompts.
+- `assets/example-code-review-prompt.md` — a complete, filled-in template example.
 

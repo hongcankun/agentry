@@ -1,6 +1,6 @@
 # Test Review Checklist
 
-Use this checklist when reviewing tests or deciding whether new tests are ready.
+Use this checklist when reviewing tests or deciding whether new tests are ready. These are pass/fail checks; for why each matters (boundary-only mocks, controlled nondeterminism, coverage as a signal not a target), see `test-design.md`.
 
 ## Correctness
 

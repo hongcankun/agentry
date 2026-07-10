@@ -58,11 +58,14 @@ def validate_commit_message(commit_message: str) -> bool:
         print(f"❌ Invalid type '{commit_type}'. Valid types are: {', '.join(sorted(VALID_TYPES))}")
         return False
 
-    # Validate description: should be short, not start with uppercase, no trailing dot
-    if len(description) > 100:
-        print("❌ Description should be 100 characters or less.")
+    # Validate the subject line: keep it short. 72 is the hard ceiling,
+    # matching Git's terminal-friendly convention (~50 aim, 72 max) so the
+    # validator agrees with the SKILL.md guidance instead of contradicting it.
+    if len(first_line) > 72:
+        print("❌ Subject line should be 72 characters or less.")
         return False
 
+    # Validate description: should not start with uppercase, no trailing dot
     if description[0].isupper():
         print("❌ Description should not start with an uppercase letter.")
         return False
@@ -125,6 +128,8 @@ def validate_commit_message(commit_message: str) -> bool:
             break
 
     print("✅ Commit message follows Conventional Commits!")
+    if has_breaking_change:
+        print("⚠️  Breaking change detected (bumps SemVer MAJOR).")
     return True
 
 

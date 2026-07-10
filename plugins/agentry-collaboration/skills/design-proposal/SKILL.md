@@ -49,13 +49,9 @@ Pick the path from the task, then converge on the shared rubric.
 
 ### Authoring path
 
-1. **Anchor to the accepted Why, and set non-goals.** Restate the problem and desired outcome from the change request and link to it, and state what the design explicitly does *not* aim to do. If no accepted request exists, flag the *Why* as unvalidated rather than justifying it here.
+1. **Anchor to the accepted Why, and set non-goals.** Restate the problem and desired outcome from the change request and link to it, and state what the design explicitly does *not* aim to do. If no accepted request exists, flag the *Why* as unvalidated.
 2. **Size the change and pick the weight** using the table above and `references/design-forms.md`. Choose the lightest artifact that still lets a reviewer judge the approach.
-3. **State the proposed design (How).** Describe the chosen approach at a level of detail proportional to the weight — enough for an implementer to build from and a reviewer to evaluate.
-4. **Weigh the alternatives.** List the main options considered and why the chosen approach wins. Include the "do nothing" or "minimal" option when it is real.
-5. **Bound the impact.** Say what the change reaches and, explicitly, what it leaves untouched — reach and effect, distinct from the non-goals of intent set above.
-6. **Address migration, rollout, rollback, and risks**, proportional to the weight. For breaking or stateful changes these are mandatory, not optional.
-7. **Fill the matching template** from `assets/` (or write the inline note directly for the smallest tier), keeping detail proportional to the change.
+3. **Fill the matching template** from `assets/` (or write the inline note directly for the smallest tier), working through its sections in order and keeping detail proportional to the weight. The template owns the per-section guidance — design, alternatives, impact, migration/rollout/rollback, risks — so fill those there rather than re-deriving them here.
 
 ### Triage path
 

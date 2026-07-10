@@ -4,13 +4,10 @@ Versioning, tagging, and changelog guidance.
 
 ## Semantic Versioning
 
-Use `MAJOR.MINOR.PATCH` (see https://semver.org/):
+Use `MAJOR.MINOR.PATCH` (see https://semver.org/). Project-relevant decisions:
 
-- **MAJOR**: incompatible API changes.
-- **MINOR**: backward-compatible new functionality.
-- **PATCH**: backward-compatible bug fixes.
-
-Pre-release and build metadata may be appended, e.g. `1.4.0-rc.1`.
+- Append pre-release and build metadata when needed, e.g. `1.4.0-rc.1`; pre-releases sort below their final release.
+- Match the tag prefix to the version (see Tagging).
 
 ## Tagging
 
@@ -54,13 +51,9 @@ Use explicit sections such as `Breaking changes:`, `Migration:`, `Compatibility:
 
 ## Release Notes and Changelog Tooling
 
-For repositories that enforce Conventional Commits, prefer generating release notes from structured commit history or merged pull requests instead of hand-copying every change.
+For repositories that enforce Conventional Commits, prefer generating release notes from structured commit history instead of hand-copying every change.
 
-Common options:
-
-- `git-cliff`: good fit for Conventional Commits. It generates changelogs from commit history and supports grouping by type, scope, breaking changes, templates, and tag ranges.
-- `github-changelog-generator`: useful for GitHub-hosted projects that organize releases around pull requests, issues, labels, and milestones.
-- GitHub Release Drafter: useful when teams want draft release notes maintained continuously from merged pull requests and labels, then published at release time.
+Default to `git-cliff`: it reads Conventional Commits, groups by type, scope, and breaking changes, and supports templates and tag ranges. If the project already organizes releases around pull requests, labels, or milestones, use its existing PR-driven tool instead (for example `github-changelog-generator` or GitHub Release Drafter).
 
 Choose the source of truth deliberately:
 

@@ -46,13 +46,9 @@ Read the production code, existing tests, and any issue or change description. I
 
 ### 2. Choose the right test level
 
-Pick the lowest level that proves the contract without hiding integration risk:
-- **Unit tests** for pure logic, branching, validation, and error handling.
-- **Component or integration tests** when behavior depends on framework wiring, persistence, network boundaries, queues, permissions, or serialization.
-- **End-to-end tests** only for critical user workflows that cannot be trusted through lower-level tests.
-- **Regression tests** for confirmed bugs, with a name or assertion that makes the previous failure obvious.
+Pick the lowest level that gives real confidence in the contract without hiding integration risk. Use the test-level table in `references/test-design.md` to match the behavior to unit, component, integration, or end-to-end, and add a regression test for a confirmed bug with a name or assertion that makes the previous failure obvious.
 
-Use `references/test-design.md` for test-level selection and case design. Use `references/test-recipes.md` for concrete workflows such as regression tests, flaky-test debugging, coverage improvements, and test review.
+See `references/test-design.md` for case design too, and `references/test-recipes.md` for concrete workflows such as regression tests, flaky-test debugging, coverage improvements, and test review.
 
 ### 3. Match local conventions
 

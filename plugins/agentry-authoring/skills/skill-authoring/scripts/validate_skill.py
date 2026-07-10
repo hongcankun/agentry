@@ -3,7 +3,12 @@ import argparse
 import re
 from pathlib import Path
 
-ALLOWED_FIELDS = {"name", "description"}
+REQUIRED_FIELDS = ("name", "description")
+# name and description are required; the rest are optional frontmatter fields
+# permitted by the Agent Skills convention (see references/convention-summary.md).
+ALLOWED_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+# Fields whose value may be a nested YAML block rather than an inline scalar.
+BLOCK_FIELDS = {"metadata"}
 OPTIONAL_DIRS = {"scripts", "references", "assets"}
 KEBAB_CASE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
@@ -23,9 +28,17 @@ def parse_frontmatter(text: str) -> dict:
         raise ValidationError("YAML frontmatter must end with ---") from exc
 
     data = {}
+    current_block = None
     for raw in lines[1:end]:
         if not raw.strip():
             continue
+        # Indented lines continue the most recent block-valued field (e.g. a
+        # nested `metadata:` mapping). Accept them as opaque; this lightweight
+        # validator does not parse nested YAML.
+        if raw[:1] in (" ", "\t"):
+            if current_block is not None:
+                continue
+            raise ValidationError(f"Unexpected indented line: {raw}")
         if ":" not in raw:
             raise ValidationError(f"Invalid YAML line: {raw}")
         key, value = raw.split(":", 1)
@@ -34,10 +47,16 @@ def parse_frontmatter(text: str) -> dict:
         if key not in ALLOWED_FIELDS:
             raise ValidationError(f"Unsupported metadata field: {key}")
         if not value:
+            if key in BLOCK_FIELDS:
+                # A bare `metadata:` header introduces a nested block below.
+                data[key] = None
+                current_block = key
+                continue
             raise ValidationError(f"Metadata field '{key}' cannot be empty")
         data[key] = value
+        current_block = None
 
-    for required in ("name", "description"):
+    for required in REQUIRED_FIELDS:
         if required not in data:
             raise ValidationError(f"Missing required metadata field: {required}")
 

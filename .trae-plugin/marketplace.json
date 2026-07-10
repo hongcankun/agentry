@@ -6,37 +6,37 @@
     {
       "name": "agentry-code-quality",
       "description": "Code review, integrated review orchestration, test-engineering, review publishing, and specialist subagents that catch correctness, security, maintainability, and test-quality issues with actionable guidance.",
-      "version": "0.13.1",
+      "version": "0.13.2",
       "source": "./plugins/agentry-code-quality"
     },
     {
       "name": "agentry-security",
       "description": "Security audit skill that runs a threat-driven review of code: maps the attack surface and trust boundaries, hunts vulnerability classes (injection, auth/authz flaws, SSRF, secrets, weak crypto, and more), rates findings by likelihood and impact, and reports exploit scenarios with concrete remediations.",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "source": "./plugins/agentry-security"
     },
     {
       "name": "agentry-git",
       "description": "Git workflow and Conventional Commits skills for branching, merging, rebasing, pull requests, releases, and well-formed commit messages.",
-      "version": "0.6.4",
+      "version": "0.6.5",
       "source": "./plugins/agentry-git"
     },
     {
       "name": "agentry-authoring",
       "description": "Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.5.1",
+      "version": "0.5.2",
       "source": "./plugins/agentry-authoring"
     },
     {
       "name": "agentry-docs",
       "description": "Lightweight documentation authoring for software repositories, currently focused on accurate README creation and maintenance.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "source": "./plugins/agentry-docs"
     },
     {
       "name": "agentry-collaboration",
       "description": "Author and triage collaboration artifacts across the change lifecycle: change requests (feature requests, bug reports, refactor proposals) that frame the Why, and design proposals or RFCs that answer the How, for work carried out by humans or AI agents.",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "source": "./plugins/agentry-collaboration"
     }
   ]
