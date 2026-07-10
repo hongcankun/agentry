@@ -12,14 +12,14 @@ Lightweight documentation authoring for software repositories, currently focused
 ## Common Use
 
 - Use `/update-readme` when creating, refreshing, or simplifying a repository README.
-- Use `readme-manager` directly when the agent should ground README changes in project structure, setup, usage, contribution, and license evidence.
+- Use `readme-authoring` directly when the agent should ground README changes in project structure, setup, usage, contribution, and license evidence.
 - Pair with [`agentry-authoring`](../agentry-authoring) when README updates describe skills, commands, rules, subagents, prompt templates, or plugin metadata.
 
 ## Components
 
 | Type | Components |
 | --- | --- |
-| Skills | [`readme-manager`](./skills/readme-manager/SKILL.md) |
+| Skills | [`readme-authoring`](./skills/readme-authoring/SKILL.md) |
 | Subagents | None |
 | Commands | [`update-readme`](./commands/update-readme.md) |
 | Rules | None |

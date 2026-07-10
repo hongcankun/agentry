@@ -1,9 +1,9 @@
 ---
-name: prompt-template-manager
+name: prompt-template-authoring
 description: Create, update, or review reusable prompt templates for AI chat or AI agents, including defining the template purpose, structure, variables, examples, and validation. Use when a user asks to create a prompt template, improve an existing one, review a template, or standardize prompts for a specific task.
 ---
 
-# Prompt Template Manager
+# Prompt Template Authoring
 
 Create, update, or review reusable prompt templates for AI chat or AI agents, ensuring they are clear, actionable, and easy to customize with variables.
 

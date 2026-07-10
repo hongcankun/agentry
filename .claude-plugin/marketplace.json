@@ -15,7 +15,7 @@
       "name": "agentry-code-quality",
       "source": "./agentry-code-quality",
       "description": "Code review, integrated review orchestration, test-engineering, review publishing, and specialist subagents that catch correctness, security, maintainability, and test-quality issues with actionable guidance.",
-      "version": "0.12.5",
+      "version": "0.13.0",
       "category": "code-quality",
       "keywords": [
         "code-review",
@@ -58,7 +58,7 @@
       "name": "agentry-authoring",
       "source": "./agentry-authoring",
       "description": "Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.4.2",
+      "version": "0.5.0",
       "category": "authoring",
       "keywords": [
         "skills",
@@ -74,7 +74,7 @@
       "name": "agentry-docs",
       "source": "./agentry-docs",
       "description": "Lightweight documentation authoring for software repositories, currently focused on accurate README creation and maintenance.",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "category": "documentation",
       "keywords": [
         "readme",

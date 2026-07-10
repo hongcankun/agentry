@@ -16,7 +16,7 @@ If the target README, intended audience, or scope of documentation changes is un
 
 ## Workflow
 
-1. Follow the `readme-manager` skill as the authoritative README procedure, including its template guidance and output expectations.
+1. Follow the `readme-authoring` skill as the authoritative README procedure, including its template guidance and output expectations.
 2. Inspect the repository structure and existing documentation:
    - find the primary `README.md` and any nested package READMEs relevant to the requested scope;
    - read project metadata, dependency files, build/test config, license, contribution docs, examples, and CLI help when available;

@@ -62,11 +62,11 @@ Agentry currently ships **6 plugins** with **45 components**: 17 skills, 4 subag
 
 | Plugin | Version | Best for | Skills | Agents | Commands | Rules |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| [`agentry-code-quality`](./plugins/agentry-code-quality) | 0.12.5 | Code review, integrated review, test design, review publishing, and pre-merge quality gates. | 4 | 2 | 5 | 3 |
+| [`agentry-code-quality`](./plugins/agentry-code-quality) | 0.13.0 | Code review, integrated review, test design, review publishing, and pre-merge quality gates. | 4 | 2 | 5 | 3 |
 | [`agentry-security`](./plugins/agentry-security) | 0.4.0 | Threat-driven audits for auth, user input, file/network access, crypto, secrets, payments, and other sensitive code. | 1 | 1 | 1 | 1 |
 | [`agentry-git`](./plugins/agentry-git) | 0.6.3 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
-| [`agentry-authoring`](./plugins/agentry-authoring) | 0.4.2 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
-| [`agentry-docs`](./plugins/agentry-docs) | 0.2.1 | Accurate README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
+| [`agentry-authoring`](./plugins/agentry-authoring) | 0.5.0 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
+| [`agentry-docs`](./plugins/agentry-docs) | 0.3.0 | Accurate README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
 | [`agentry-collaboration`](./plugins/agentry-collaboration) | 0.2.1 | Authoring and triaging collaboration artifacts across the change lifecycle: change requests that frame the Why, and design proposals or RFCs that answer the How. | 2 | 0 | 4 | 0 |
 
 ### Choosing Plugins
@@ -74,7 +74,7 @@ Agentry currently ships **6 plugins** with **45 components**: 17 skills, 4 subag
 - Install [`agentry-code-quality`](./plugins/agentry-code-quality) for everyday engineering review work: review a diff, coordinate an integrated review, improve tests, run a quality gate, or publish review findings.
 - Install [`agentry-security`](./plugins/agentry-security) when agents need a dedicated security audit workflow and a proactive security-auditor subagent.
 - Install [`agentry-git`](./plugins/agentry-git) when agents should help with local commits, pull requests, merged-branch cleanup, and release publishing.
-- Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching manager skills plus cross-artifact review.
+- Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching authoring skills plus cross-artifact review.
 - Install [`agentry-docs`](./plugins/agentry-docs) when the main need is README maintenance without the broader authoring toolkit.
 - Install [`agentry-collaboration`](./plugins/agentry-collaboration) when agents should help write well-framed feature requests, bug reports, or refactor proposals and triage incoming ones, and turn accepted requests into design proposals or RFCs (and triage those on their design merits).
 
@@ -91,14 +91,14 @@ For a normal feature or bug-fix branch, install [`agentry-code-quality`](./plugi
 
 1. Implement the feature or fix the bug.
 2. Run `/improve-tests` to add, update, debug, or review focused automated tests through the `test-engineering` workflow.
-3. Run `/quality-gate` to review the bounded change across code review, testing, and validation; use `code-reviewer` or `test-engineer` for delegated specialist work when subagents are available.
+3. Run `/run-quality-gate` to review the bounded change across code review, testing, and validation; use `code-reviewer` or `test-engineer` for delegated specialist work when subagents are available.
 4. Run `/prepare-commit` to move the work onto an appropriate short-lived branch when needed, stage a focused change set, and create a local Conventional Commit.
 5. Run `/prepare-pr` to draft the PR title/body, then push the feature branch and create or update the PR after explicit confirmation.
 6. After the PR is merged, run `/finish-pr` to fast-forward the base branch, delete the merged local feature branch, and prune stale remote-tracking refs.
 
 For security-sensitive changes, install [`agentry-security`](./plugins/agentry-security) alongside [`agentry-code-quality`](./plugins/agentry-code-quality): run `/audit-security` through the `security-audit` workflow before the quality gate, use `security-auditor` for delegated threat review when subagents are available, then use `/publish-review` when approved findings should be posted to a review surface.
 
-For agent-extension changes, install [`agentry-authoring`](./plugins/agentry-authoring) and optionally [`agentry-docs`](./plugins/agentry-docs): use the relevant manager skill while editing, run `/review-authoring` through the `authoring-review` workflow, use `authoring-reviewer` for delegated review when subagents are available, and run `/update-readme` when README docs are part of the change.
+For agent-extension changes, install [`agentry-authoring`](./plugins/agentry-authoring) and optionally [`agentry-docs`](./plugins/agentry-docs): use the relevant authoring skill while editing, run `/review-authoring` through the `authoring-review` workflow, use `authoring-reviewer` for delegated review when subagents are available, and run `/update-readme` when README docs are part of the change.
 
 ## Local Development
 

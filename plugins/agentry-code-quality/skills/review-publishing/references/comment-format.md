@@ -64,7 +64,7 @@ Rules:
 - If the source has different coverage tracks, adapt the `Coverage` labels while keeping the same role: what was covered, skipped, or degraded.
 - Keep `Validation` scoped to checks the reviewer ran or attempted. Do not fetch or summarize platform-owned PR/MR checks, workflow, pipeline, or check-run status unless the user explicitly asked for that context or supplied CI failure findings.
 - Keep `_Source:_` as one italic line, not bullets, blockquotes, or a table.
-- Use stable `key=value` fields for reviewed-revision metadata when available, such as `_Source: quality-gate; reviewed=patchset 7; head=feature/foo@abc1234; base=main@def5678._`.
+- Use stable `key=value` fields for reviewed-revision metadata when available, such as `_Source: run-quality-gate; reviewed=patchset 7; head=feature/foo@abc1234; base=main@def5678._`.
 - Omit unavailable metadata fields instead of inventing placeholders.
 - Keep platform actions, URLs, comment ids, review ids, and status bookkeeping out of summary comment bodies.
 

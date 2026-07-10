@@ -10,7 +10,7 @@ Authoring skills and review support for building AI agent extensions: create and
 
 ## Common Use
 
-- Use the matching manager skill while creating or updating an artifact: `skill-manager`, `subagent-manager`, `command-manager`, `rule-manager`, `prompt-template-manager`, or `plugin-manager`.
+- Use the matching authoring skill while creating or updating an artifact: `skill-authoring`, `subagent-authoring`, `command-authoring`, `rule-authoring`, `prompt-template-authoring`, or `plugin-authoring`.
 - Use `/review-authoring` after changing skills, commands, rules, subagents, prompt templates, plugin metadata, or docs that describe those artifacts.
 - Use the `authoring-reviewer` subagent for an isolated cross-artifact review when delegation is available.
 - Pair with [`agentry-docs`](../agentry-docs) when README updates are part of the same extension change.
@@ -19,7 +19,7 @@ Authoring skills and review support for building AI agent extensions: create and
 
 | Type | Components |
 | --- | --- |
-| Skills | [`skill-manager`](./skills/skill-manager/SKILL.md), [`subagent-manager`](./skills/subagent-manager/SKILL.md), [`command-manager`](./skills/command-manager/SKILL.md), [`rule-manager`](./skills/rule-manager/SKILL.md), [`prompt-template-manager`](./skills/prompt-template-manager/SKILL.md), [`plugin-manager`](./skills/plugin-manager/SKILL.md), [`authoring-review`](./skills/authoring-review/SKILL.md) |
+| Skills | [`skill-authoring`](./skills/skill-authoring/SKILL.md), [`subagent-authoring`](./skills/subagent-authoring/SKILL.md), [`command-authoring`](./skills/command-authoring/SKILL.md), [`rule-authoring`](./skills/rule-authoring/SKILL.md), [`prompt-template-authoring`](./skills/prompt-template-authoring/SKILL.md), [`plugin-authoring`](./skills/plugin-authoring/SKILL.md), [`authoring-review`](./skills/authoring-review/SKILL.md) |
 | Subagents | [`authoring-reviewer`](./agents/authoring-reviewer.md) |
 | Commands | [`review-authoring`](./commands/review-authoring.md) |
 | Rules | [`authoring/authoring-review`](../../rules/authoring/authoring-review.md) |

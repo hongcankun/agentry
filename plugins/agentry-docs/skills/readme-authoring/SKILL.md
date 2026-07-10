@@ -1,9 +1,9 @@
 ---
-name: readme-manager
+name: readme-authoring
 description: Create, refresh, or simplify repository README files by grounding setup, usage, contribution, and license guidance in the actual project structure. Use when a user asks to create a README, update an existing README, or document a software project.
 ---
 
-# Readme Manager
+# Readme Authoring
 
 Create or update repository README files with accurate, task-oriented documentation.
 

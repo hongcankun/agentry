@@ -14,7 +14,7 @@ Code review, integrated review orchestration, test-engineering, and review-publi
 ## Common Use
 
 - Use `/improve-tests` before merge when a feature or bug fix needs stronger automated coverage.
-- Use `/quality-gate` for an integrated pre-merge check across code review, testing, and validation.
+- Use `/run-quality-gate` for an integrated pre-merge check across code review, testing, and validation.
 - Use `/review-pr` when a PR/MR should be reviewed and findings published in one workflow.
 - Use `/publish-review` when review findings already exist and only need to be drafted or posted.
 - Pair with [`agentry-git`](../agentry-git) when the same workflow should continue into `/prepare-commit`, `/prepare-pr`, or `/finish-pr`.
@@ -25,7 +25,7 @@ Code review, integrated review orchestration, test-engineering, and review-publi
 | --- | --- |
 | Skills | [`code-review`](./skills/code-review/SKILL.md), [`test-engineering`](./skills/test-engineering/SKILL.md), [`review-publishing`](./skills/review-publishing/SKILL.md), [`integrated-review`](./skills/integrated-review/SKILL.md) |
 | Subagents | [`code-reviewer`](./agents/code-reviewer.md), [`test-engineer`](./agents/test-engineer.md) |
-| Commands | [`review-code`](./commands/review-code.md), [`review-pr`](./commands/review-pr.md), [`improve-tests`](./commands/improve-tests.md), [`quality-gate`](./commands/quality-gate.md), [`publish-review`](./commands/publish-review.md) |
+| Commands | [`review-code`](./commands/review-code.md), [`review-pr`](./commands/review-pr.md), [`improve-tests`](./commands/improve-tests.md), [`run-quality-gate`](./commands/run-quality-gate.md), [`publish-review`](./commands/publish-review.md) |
 | Rules | [`code-quality/code-review`](../../rules/code-quality/code-review.md), [`code-quality/code-style`](../../rules/code-quality/code-style.md), [`code-quality/testing`](../../rules/code-quality/testing.md) |
 
 ## Install
