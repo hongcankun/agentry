@@ -1,6 +1,6 @@
 ---
 name: command-authoring
-description: Create, update, or review AI agent commands across tools like Claude Code, Trae CLI, Cursor, and Codex, including defining command purpose, arguments, prompt body, file placement, metadata, and validation. Use when a user asks to create a slash command, edit an existing command, or review command files such as .claude/commands/, .trae/commands/, .cursor/commands/, or plugin commands/.
+description: Create, update, or review AI agent commands (reusable, user-invoked definitions, often slash commands, that run a focused agent workflow) across tools like Claude Code, Trae CLI, Cursor, and Codex. Use when a user asks to create a slash command, edit an existing command, or review command files such as .claude/commands/, .trae/commands/, .cursor/commands/, or plugin commands/.
 ---
 
 # Command Authoring

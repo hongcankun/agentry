@@ -1,6 +1,6 @@
 ---
 name: review-publishing
-description: Draft and publish existing review findings to PRs, MRs, or code review surfaces by mapping findings to inline or summary comments, deduplicating noise, and requiring explicit approval for remote mutations. Use when the user asks to publish, post, draft, or prepare review comments from existing findings.
+description: Turn existing review findings into inline or summary review comments and publish them to a PR, MR, or other code review surface. Use when the user asks to publish, post, draft, or prepare review comments from findings a prior review already produced, not to run a new review.
 ---
 
 # Review Publishing
