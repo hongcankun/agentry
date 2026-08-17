@@ -1,0 +1,13 @@
+#!/bin/sh
+# Stand-in for the `codebase` review CLI, staged onto PATH ahead of the real
+# binary in sandbox mode so a publish attempt is captured instead of mutating a
+# real remote. It records the invocation to the run-local capture directory and
+# prints a stable comment URL, so a publish is backed by a real command that
+# changed nothing outside the run.
+#
+# __SINK__ is replaced with the run-local capture directory at staging time.
+CAPTURE="__SINK__"
+mkdir -p "$CAPTURE"
+printf '%s\n' "codebase $*" >>"$CAPTURE/calls.log"
+# Stable response the caller can report back as the published comment link.
+echo "https://example.invalid/review/123/comments/4567"

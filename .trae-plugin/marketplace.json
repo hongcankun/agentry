@@ -24,7 +24,7 @@
     {
       "name": "agentry-authoring",
       "description": "Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.5.2",
+      "version": "0.6.0",
       "source": "./plugins/agentry-authoring"
     },
     {

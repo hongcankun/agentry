@@ -58,14 +58,14 @@ The script supports two delivery channels: `marketplace`, which calls the target
 
 ## Plugins
 
-Agentry currently ships **6 plugins** with **45 components**: 17 skills, 4 subagents, 17 commands, and 7 rules. Use `python3 scripts/agentry.py inventory --details` for the full manifest-derived inventory.
+Agentry currently ships **6 plugins** with **48 components**: 19 skills, 4 subagents, 18 commands, and 7 rules. Use `python3 scripts/agentry.py inventory --details` for the full manifest-derived inventory.
 
 | Plugin | Version | Best for | Skills | Agents | Commands | Rules |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
 | [`agentry-code-quality`](./plugins/agentry-code-quality) | 0.13.2 | Code review, integrated review, test design, review publishing, and pre-merge quality gates. | 4 | 2 | 5 | 3 |
 | [`agentry-security`](./plugins/agentry-security) | 0.4.2 | Threat-driven audits for auth, user input, file/network access, crypto, secrets, payments, and other sensitive code. | 1 | 1 | 1 | 1 |
 | [`agentry-git`](./plugins/agentry-git) | 0.6.5 | Branching, Conventional Commits, pull requests, merged-branch cleanup, and release flow. | 2 | 0 | 5 | 2 |
-| [`agentry-authoring`](./plugins/agentry-authoring) | 0.5.2 | Creating and reviewing skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 7 | 1 | 1 | 1 |
+| [`agentry-authoring`](./plugins/agentry-authoring) | 0.6.0 | Creating, reviewing, and behaviorally evaluating skills, subagents, commands, rules, prompt templates, plugins, and marketplaces. | 9 | 1 | 2 | 1 |
 | [`agentry-docs`](./plugins/agentry-docs) | 0.3.1 | Accurate README creation and maintenance for software repositories. | 1 | 0 | 1 | 0 |
 | [`agentry-collaboration`](./plugins/agentry-collaboration) | 0.2.2 | Authoring and triaging collaboration artifacts across the change lifecycle: change requests that frame the Why, and design proposals or RFCs that answer the How. | 2 | 0 | 4 | 0 |
 
@@ -74,7 +74,7 @@ Agentry currently ships **6 plugins** with **45 components**: 17 skills, 4 subag
 - Install [`agentry-code-quality`](./plugins/agentry-code-quality) for everyday engineering review work: review a diff, coordinate an integrated review, improve tests, run a quality gate, or publish review findings.
 - Install [`agentry-security`](./plugins/agentry-security) when agents need a dedicated security audit workflow and a proactive security-auditor subagent.
 - Install [`agentry-git`](./plugins/agentry-git) when agents should help with local commits, pull requests, merged-branch cleanup, and release publishing.
-- Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching authoring skills plus cross-artifact review.
+- Install [`agentry-authoring`](./plugins/agentry-authoring) when you author agent extensions and want the matching authoring skills, cross-artifact review, and behavioral before/after evaluation.
 - Install [`agentry-docs`](./plugins/agentry-docs) when the main need is README maintenance without the broader authoring toolkit.
 - Install [`agentry-collaboration`](./plugins/agentry-collaboration) when agents should help write well-framed feature requests, bug reports, or refactor proposals and triage incoming ones, and turn accepted requests into design proposals or RFCs (and triage those on their design merits).
 

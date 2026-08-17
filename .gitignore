@@ -9,3 +9,6 @@ __pycache__/
 
 # OS metadata
 .DS_Store
+
+# Evaluation run directories (throwaway prepare/collect/run output)
+.eval-runs/

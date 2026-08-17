@@ -1,0 +1,1 @@
+../../plugins/agentry-authoring/commands/evaluate-authoring.md

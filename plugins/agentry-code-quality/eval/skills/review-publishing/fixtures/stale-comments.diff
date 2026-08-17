@@ -1,0 +1,23 @@
+diff --git a/src/auth/session.py b/src/auth/session.py
+index 3a1f2b0..9c4d5e1 100644
+--- a/src/auth/session.py
++++ b/src/auth/session.py
+@@ -12,10 +12,14 @@ class SessionStore:
+     def __init__(self, backend):
+         self._backend = backend
+         self._ttl = 3600
++        self._cache = {}
+ 
+-    def get(self, token):
+-        return self._backend.load(token)
++    def get(self, token):
++        # Regression: cache is never invalidated on TTL expiry, so an expired
++        # session keeps returning a live user until the process restarts.
++        if token in self._cache:
++            return self._cache[token]
++        session = self._backend.load(token)
++        self._cache[token] = session
++        return session
+ 
+     def revoke(self, token):
+         self._backend.delete(token)

@@ -1,5 +1,5 @@
 {
-  "$comment": "Canonical, tool-agnostic source of truth for Agentry's extensions and how they group into plugins. Per-tool packaging (e.g. .claude-plugin/, .trae-plugin/) and derived skill references (a plugin's skillReferences embeds a copy of a canonical rule into a skill's references/) are GENERATED from this file by 'scripts/agentry.py generate', and 'scripts/agentry.py install' installs components into a tool's directories from here. Edit this file, not the generated artifacts.",
+  "$comment": "Canonical, tool-agnostic source of truth for Agentry's extensions and how they group into plugins. Per-tool packaging (e.g. .claude-plugin/, .trae-plugin/), derived skill references (a plugin's skillReferences embeds a copy of a canonical rule into a skill's references/), and bundled skill scripts (a plugin's skillScripts embeds a byte-identical copy of a canonical scripts/ file into a skill's scripts/) are GENERATED from this file by 'scripts/agentry.py generate', and 'scripts/agentry.py install' installs components into a tool's directories from here. Edit this file, not the generated artifacts.",
   "name": "agentry",
   "description": "A collection of reusable extensions for AI coding agents, grouped into plugins.",
   "version": "0.5.1",
@@ -47,13 +47,14 @@
     {
       "name": "agentry-authoring",
       "description": "Authoring skills and review support for building AI agent extensions: create and review skills, subagents, commands, rules, prompt templates, and plugins/marketplaces that follow open agent conventions.",
-      "version": "0.5.2",
+      "version": "0.6.0",
       "category": "authoring",
-      "keywords": ["skills", "subagents", "commands", "rules", "prompts", "plugins", "content-review"],
-      "skills": ["skill-authoring", "subagent-authoring", "command-authoring", "rule-authoring", "prompt-template-authoring", "plugin-authoring", "authoring-review"],
+      "keywords": ["skills", "subagents", "commands", "rules", "prompts", "plugins", "content-review", "evaluation"],
+      "skills": ["skill-authoring", "subagent-authoring", "command-authoring", "rule-authoring", "prompt-template-authoring", "plugin-authoring", "authoring-review", "authoring-evaluation", "evaluation-sandbox"],
       "agents": ["authoring-reviewer"],
-      "commands": ["review-authoring"],
-      "rules": ["authoring/authoring-review.md"]
+      "commands": ["review-authoring", "evaluate-authoring"],
+      "rules": ["authoring/authoring-review.md"],
+      "skillScripts": { "authoring-evaluation": ["scripts/eval_contract.py"] }
     },
     {
       "name": "agentry-docs",

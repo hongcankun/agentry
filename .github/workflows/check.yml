@@ -26,3 +26,31 @@ jobs:
         with:
           python-version: "3.x"
       - run: python3 -m unittest discover scripts/tests
+
+  skill-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      # Run each skill's own test suite from inside its scripts/ directory, so a
+      # skill script is exercised exactly as it ships — self-contained, with no
+      # dependency on the repo tooling on the path. Any skill with a
+      # scripts/tests/ directory is picked up by convention; skills without one
+      # are skipped.
+      - name: Run skill-local test suites
+        run: |
+          set -euo pipefail
+          found=0
+          for tests in plugins/*/skills/*/scripts/tests; do
+            [ -d "$tests" ] || continue
+            found=1
+            scripts_dir="$(dirname "$tests")"
+            echo "== $scripts_dir =="
+            ( cd "$scripts_dir" && python3 -m unittest discover -s tests )
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No skill-local test suites found." >&2
+            exit 1
+          fi

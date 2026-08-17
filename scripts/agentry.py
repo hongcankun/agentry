@@ -13,6 +13,7 @@ Subcommands:
 - ``inventory`` — report manifest plugins, versions, and component membership.
 - ``generate``  — regenerate Claude Code and/or Trae packaging from the manifest.
 - ``validate``  — run repository consistency checks.
+- ``evaluate``  — behavioral evaluation for authoring artifacts (prepare/collect/run).
 
 Delivery channels. Neither tool's plugin format has a "rules" component, so
 rules are never delivered by a marketplace install; ``install`` always copies
@@ -80,7 +81,22 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
+from datetime import datetime, timezone
 from pathlib import Path
+
+# The behavioral-evaluation contract (schema constants and the collect stage)
+# lives in a freestanding, stdlib-only sibling module so a byte-identical copy
+# can run inside a skill. Import the moved names back here so existing
+# ``agentry.<name>`` references keep working. Guard the sys.path insert so a
+# repeated import does not shadow another checkout's copy.
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent)
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+import eval_contract as ec
+# The evaluation contract lives in the freestanding eval_contract module; agentry
+# reaches it only through the ``ec`` alias (ec.prepare/collect/parse_scenario/...)
+# so the boundary is visible at every call site and nothing is re-exported here.
 
 # Default repo root for Agentry's own checkout: the parent of scripts/. A
 # downstream catalog reusing this module via git submodule keeps its own content
@@ -164,6 +180,36 @@ COMPONENTS = ("skills", "agents", "commands", "rules")
 COMPONENT_CHOICES = COMPONENTS + ("all",)
 
 COMPONENT_TITLE = {"rules": "Rules", "skills": "Skills", "agents": "Agents", "commands": "Commands"}
+
+# ---------------------------------------------------------------------------
+# Behavioral evaluation (`evaluate`) contract constants.
+#
+# The evaluate subcommand is a structured-data broker: it prepares scenario
+# cases, optionally invokes an external agent executor, and collects/validates
+# JSONL result records into a scorecard. It never invokes an LLM or parses
+# free-form agent prose. See docs/designs/0001-behavioral-evaluation-authoring-artifacts.md.
+
+# Scenario directories mirror the component vocabulary but live under an `eval/`
+# tree outside normal component roots, so marketplace/generate/install discovery
+# never treats them as shippable artifacts.
+EVAL_DIR_NAME = "eval"
+# eval trees are keyed by artifact kind (plural component name) then artifact.
+EVAL_COMPONENTS = ("skills", "commands", "agents", "rules")
+
+# The evaluation contract constants (schema markers, versions, vocabularies,
+# evidence tiers) are imported from the freestanding ``eval_contract`` module;
+# see the import block after ``from pathlib import Path``.
+
+# Execution modes. Rendered simulation is portable and fully built by the runner;
+# true-activation sandbox is preferred for acceptance evidence and delegates
+# tool isolation/transcript capture to the executor + evaluation-sandbox skill.
+EVAL_MODES = ("rendered", "sandbox")
+DEFAULT_EVAL_MODE = "rendered"
+
+# Default location for evaluation run directories: a dedicated, self-describing,
+# gitignored root under the repo (not a generic scratch dir), so scorecards stay
+# discoverable for PR evidence and are easy to clean with `evaluate clean`.
+EVAL_RUNS_DIRNAME = ".eval-runs"
 
 FILE_REPORT_TAGS = {"missing", "synced", "stale"}
 PLUGIN_REPORT_TAGS = {
@@ -1977,6 +2023,43 @@ def generate_skill_references(manifest, check, changed):
                 write_or_check(dest, build_skill_reference(rule_rel), check, changed)
 
 
+def build_skill_script(script_rel):
+    """Return the content a skill's bundled copy of a canonical script must hold.
+
+    The script under ``scripts/`` is the single source of truth (imported by
+    this module); ``generate`` embeds a byte-identical copy inside the skill so
+    the skill is self-contained on any install, and ``generate --check`` fails
+    on drift. The copy is verbatim: the script is stdlib-only and freestanding
+    precisely so it runs unchanged inside the skill.
+    """
+    script_path = validate_path_fragment(script_rel, "skillScripts path", allow_nested=True)
+    src = confined_path(REPO_ROOT, script_path, "skillScripts path")
+    if not src.exists():
+        sys.exit(f"error: skillScripts source not found: {src}")
+    return src.read_text(encoding="utf-8")
+
+
+def generate_skill_scripts(manifest, check, changed):
+    """Materialize each plugin's skillScripts into the skill's scripts/ dir.
+
+    The mapping in agentry.json associates a skill with canonical script paths
+    (under scripts/); this embeds a byte-identical copy so the script travels
+    with the (copied) skill, while the canonical script stays the single source
+    of truth that this module imports.
+    """
+    for plugin in manifest["plugins"]:
+        plugin_name = validate_path_fragment(plugin["name"], "plugin name", allow_nested=False)
+        for skill, scripts in plugin.get("skillScripts", {}).items():
+            skill_name = validate_path_fragment(skill, "skill name", allow_nested=False)
+            for script_rel in scripts:
+                script_path = validate_path_fragment(script_rel, "skillScripts path", allow_nested=True)
+                dest = (
+                    PLUGINS_DIR / plugin_name / "skills" / skill_name
+                    / "scripts" / Path(script_path).name
+                )
+                write_or_check(dest, build_skill_script(script_rel), check, changed)
+
+
 def check_plugin_readmes(manifest, missing):
     """Require each declared plugin to have a root README.md."""
     for plugin in manifest["plugins"]:
@@ -1995,6 +2078,7 @@ def check_generated_packaging(manifest, targets):
         else:
             generate_trae(manifest, check=True, changed=changed)
     generate_skill_references(manifest, check=True, changed=changed)
+    generate_skill_scripts(manifest, check=True, changed=changed)
     return changed
 
 
@@ -2015,6 +2099,8 @@ def cmd_generate(args):
         # Derived skill references are tool-agnostic (identical content for
         # every tool), so generate them once regardless of the selected target.
         generate_skill_references(manifest, check=False, changed=changed)
+        # Bundled skill scripts (canonical copies) are likewise tool-agnostic.
+        generate_skill_scripts(manifest, check=False, changed=changed)
 
     label = " + ".join(targets) if args.target == "all" else args.target
     if args.check:
@@ -2037,8 +2123,10 @@ def cmd_validate(args):
     changed = check_generated_packaging(manifest, targets)
     missing = []
     check_plugin_readmes(manifest, missing)
+    leaked = []
+    check_eval_exclusion(manifest, leaked)
 
-    if changed or missing:
+    if changed or missing or leaked:
         if changed:
             print(f"Out of date (run '{cli_name()} generate'):")
             for path in changed:
@@ -2047,9 +2135,762 @@ def cmd_validate(args):
             print("Missing required plugin README files (author these manually):")
             for path in missing:
                 print(f"  {path}")
+        if leaked:
+            print("Evaluation assets must stay under plugins/*/eval/ (not shippable artifacts):")
+            for path in leaked:
+                print(f"  {path}")
         return 1
     print("Repository validation passed.")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# evaluate: behavioral evaluation for authoring artifacts
+#
+# The runner brokers structured data only. `prepare` discovers plugin-local
+# scenarios, resolves artifact/rule context, materializes before/after artifact
+# source, and writes a run manifest plus producer-facing execution cases.
+# `/evaluate-authoring` (an active agent runtime) produces outputs and writes
+# JSONL result records. `collect` validates and aggregates those records into a
+# scorecard. The runner never invokes an LLM or parses free-form agent prose.
+# ---------------------------------------------------------------------------
+
+
+def eval_root(plugin_name):
+    """Return the ``plugins/<plugin>/eval`` directory for a plugin."""
+    plugin_name = validate_path_fragment(plugin_name, "plugin name", allow_nested=False)
+    return PLUGINS_DIR / plugin_name / EVAL_DIR_NAME
+
+
+def discover_scenarios(plugins):
+    """Yield scenario descriptors under each plugin's ``eval/`` tree.
+
+    Descriptors are dicts with the plugin name, eval-tree kind directory
+    (skills/commands/agents/rules), artifact key path, and the scenario file.
+    Fixtures and tool-mocks subtrees are skipped; only ``*.md`` files directly
+    under an artifact directory are scenarios.
+    """
+    for plugin in plugins:
+        plugin_name = plugin["name"]
+        base = eval_root(plugin_name)
+        if not base.is_dir():
+            continue
+        for kind_dir in EVAL_COMPONENTS:
+            kind_base = base / kind_dir
+            if not kind_base.is_dir():
+                continue
+            for scenario_file in sorted(kind_base.rglob("*.md")):
+                parts = scenario_file.relative_to(kind_base).parts
+                # Skip fixtures/ and tool-mocks/ material nested under an artifact.
+                if any(part in ("fixtures", "tool-mocks") for part in parts):
+                    continue
+                artifact_key = "/".join(parts[:-1])
+                if not artifact_key:
+                    continue  # scenario file must live under an artifact directory
+                yield {
+                    "plugin": plugin_name,
+                    "kind_dir": kind_dir,
+                    "artifact_key": artifact_key,
+                    "path": scenario_file,
+                }
+
+
+def _artifact_path_matches(scenario, artifact_arg):
+    """Return True when a parsed scenario belongs to the given artifact path."""
+    if not artifact_arg:
+        return True
+    target = str(Path(artifact_arg)).rstrip("/")
+    scenario_artifact = str(scenario.get("artifact", "")).rstrip("/")
+    return scenario_artifact == target or scenario_artifact.startswith(target + "/")
+
+
+def resolve_scenario_scope(args, plugins):
+    """Resolve the ordered, deduped scenario file list for a scope selection."""
+    artifact_arg = getattr(args, "artifact", None)
+    plugin_args = getattr(args, "plugin", None)
+    component_args = getattr(args, "component", None)
+    scenario_args = getattr(args, "scenario", None)
+
+    has_scope = bool(artifact_arg or plugin_args or component_args or scenario_args)
+    if not has_scope and not getattr(args, "all", False):
+        sys.exit("error: refusing to evaluate every scenario without an artifact path, "
+                 "scope filter (--plugin/--component/--scenario), or explicit --all")
+
+    selected = select_plugins(plugins, plugin_args)
+    components = component_selection(component_args)
+    wanted_kinds = {kind for kind in EVAL_COMPONENTS if kind in components}
+    wanted_scenarios = list(dict.fromkeys(scenario_args)) if scenario_args else None
+
+    descriptors = []
+    seen = set()
+    for descriptor in discover_scenarios(selected):
+        if descriptor["kind_dir"] not in wanted_kinds:
+            continue
+        key = str(descriptor["path"])
+        if key in seen:
+            continue
+        # Parse once, then apply the artifact-path and scenario-id filters.
+        scenario = ec.parse_scenario(descriptor["path"])
+        if not _artifact_path_matches(scenario, artifact_arg):
+            continue
+        if wanted_scenarios is not None and scenario["id"] not in wanted_scenarios:
+            continue
+        seen.add(key)
+        descriptor["scenario"] = scenario
+        descriptors.append(descriptor)
+    return descriptors
+
+
+# --- side source materialization (side-effect-free, object-history only) ----
+
+
+def _git(args_list, *, check=True):
+    """Run ``git -C REPO_ROOT`` returning (returncode, stdout, stderr)."""
+    binary = shutil.which("git")
+    if not binary:
+        sys.exit("error: git is required to materialize ref:<git-ref> artifact sources")
+    argv = [binary, "-C", str(REPO_ROOT), *args_list]
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    if check and proc.returncode != 0:
+        sys.exit(f"error: git {' '.join(args_list)} failed: {proc.stderr.strip()}")
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def git_blob_id(ref, rel_path):
+    """Return the object id for ``ref:rel_path`` or None when absent at that ref."""
+    # --end-of-options stops a leading-dash ref from being parsed as a git option.
+    code, out, _ = _git(
+        ["rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}:{rel_path}"],
+        check=False,
+    )
+    return out.strip() if code == 0 and out.strip() else None
+
+
+def snapshot_artifact_source(ref, source_rel, dest_dir):
+    """Materialize ``ref``'s artifact source under ``dest_dir`` via git archive.
+
+    ``git archive`` reads object history only: it never touches the working
+    tree, index, or HEAD, so ref snapshots are safe and repeatable.
+    """
+    # Confine the destination so a traversing source_rel cannot create dirs
+    # outside the run's sources tree, even before git validates the pathspec.
+    dest = confined_leaf_path(dest_dir, source_rel, "artifact source")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    binary = shutil.which("git")
+    if not binary:
+        sys.exit("error: git is required to materialize ref:<git-ref> artifact sources")
+    if not shutil.which("tar"):
+        sys.exit("error: tar is required to materialize ref:<git-ref> artifact sources")
+    # A clear message when the artifact does not exist at this ref: git archive
+    # would otherwise abort with a raw "pathspec" error.
+    if git_blob_id(ref, source_rel) is None:
+        sys.exit(
+            f"error: artifact source {source_rel!r} does not exist at ref {ref!r}; "
+            "use an artifact-absent side with source 'absent' when intentionally "
+            "comparing against no artifact."
+        )
+    # --end-of-options stops a leading-dash ref from being parsed as a git
+    # option; source_rel is already confined, so it is safe as a positional path.
+    tar = subprocess.run(
+        [binary, "-C", str(REPO_ROOT), "archive", "--end-of-options", ref, source_rel],
+        capture_output=True, check=False,
+    )
+    if tar.returncode != 0:
+        sys.exit(f"error: git archive {ref}:{source_rel} failed: {tar.stderr.decode(errors='replace').strip()}")
+    extract_root = dest_dir
+    extract_root.mkdir(parents=True, exist_ok=True)
+    untar = subprocess.run(
+        ["tar", "-x", "-C", str(extract_root)], input=tar.stdout, capture_output=True, check=False,
+    )
+    if untar.returncode != 0:
+        sys.exit(f"error: extracting {ref}:{source_rel} failed: {untar.stderr.decode(errors='replace').strip()}")
+    return dest
+
+
+def assert_fixtures_stable(scenario, refs, allow_drift):
+    """Abort when a scenario's fixtures differ across compared git refs.
+
+    v1 uses the current working-tree suite, fixtures, and checks for both sides;
+    only artifact source is snapshotted per ref. A fixture that changed across
+    compared refs would make the comparison ambiguous, so reject unless
+    explicitly allowed.
+    """
+    refs = [ref for ref in refs if ref]
+    if allow_drift or len(refs) < 2:
+        return
+    fixtures = scenario.get("fixtures", {})
+    scenario_dir = scenario["_dir"].relative_to(REPO_ROOT)
+    for name, rel in fixtures.items():
+        fixture_rel = str(scenario_dir / rel)
+        blob_ids = {git_blob_id(ref, fixture_rel) for ref in refs}
+        if len(blob_ids) > 1:
+            joined = ", ".join(refs)
+            sys.exit(f"error: fixture {name!r} ({fixture_rel}) differs across refs {joined}; "
+                     "pass --allow-fixture-drift to compare anyway")
+
+
+# --- artifact context resolution -------------------------------------------
+#
+# These resolvers are the repo-coupled half of prepare: they use this checkout's
+# paths to turn a scenario into an artifact identity, on-disk source, and rule
+# envelope. They live here — not in the freestanding ``eval_contract`` module —
+# so the contract module carries no repo-path or manifest coupling;
+# ``prepare_run`` feeds their output to ``eval_contract.prepare`` as
+# ``ScenarioSide`` inputs.
+
+
+def resolve_rule_context(rule_path, *, rules_dir):
+    """Return the activation envelope for a canonical rule under evaluation.
+
+    Rules are evaluated as active guidance in context. Plugin membership is
+    Agentry distribution metadata, not part of the evaluation case contract.
+    """
+    rule_path = validate_path_fragment(rule_path, "rule path", allow_nested=True)
+    src = confined_path(rules_dir, rule_path, "rule path")
+    if not src.exists():
+        sys.exit(f"error: rule not found: {src}")
+    return {"rule_path": f"rules/{rule_path}"}
+
+
+def resolve_artifact_context(scenario, *, repo_root, rules_dir):
+    """Resolve artifact kind, canonical source, and manifest/rule context."""
+    artifact_rel = scenario["artifact"]
+    kind = scenario["kind"]
+    context = {"kind": kind, "artifact": artifact_rel, "rule_envelope": None}
+    if kind == "rule":
+        rule_rel = artifact_rel[len("rules/"):] if artifact_rel.startswith("rules/") else artifact_rel
+        context["rule_envelope"] = resolve_rule_context(rule_rel, rules_dir=rules_dir)
+        # Rule source travels as the whole (nested) rule file.
+        context["source_rel"] = f"rules/{validate_path_fragment(rule_rel, 'rule path', allow_nested=True)}"
+        context["source_is_dir"] = False
+        return context
+    # Non-rule artifacts point at a file inside plugins/<plugin>/...; a skill
+    # snapshot travels as its whole directory so references/ come along. Confine
+    # the artifact path the same way fixtures and rules are confined, so a
+    # scenario cannot read (or later snapshot) a file outside the repo.
+    validate_path_fragment(artifact_rel, "artifact path", allow_nested=True)
+    confined_path(repo_root, artifact_rel, "artifact path")
+    if kind == "skill":
+        context["source_rel"] = str(Path(artifact_rel).parent)
+        context["source_is_dir"] = True
+    else:
+        context["source_rel"] = artifact_rel
+        context["source_is_dir"] = False
+    return context
+
+
+def runner_tag(manifest, *, brand):
+    """Return the ``{name, version}`` provenance tag for the run generator.
+
+    ``name`` is the active runner's display brand (so a downstream wrapper that
+    reuses this module stamps its own name), and ``version`` is the project
+    version from the manifest (which moves per release), or ``None`` when the
+    manifest declares none. This is honest, moving provenance — unlike a frozen
+    contract-version constant — recording which runner and release produced a run.
+    """
+    return {"name": brand, "version": manifest.get("version")}
+
+
+# --- case / manifest construction -----------------------------------------
+#
+# The scenario/case/manifest builders and the single ``prepare`` entry point
+# live in the freestanding ``eval_contract`` module and are imported at the top
+# of this file so a byte-identical copy can run inside a skill. ``prepare``
+# consumes already-resolved ``ScenarioSide`` inputs, so all repo/git resolution
+# (artifact context, per-side source placement, the runner tag) happens here in
+# ``prepare_run`` before the contract module is called.
+
+
+def write_json(path, data):
+    """Write ``data`` as pretty JSON, creating parent directories."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(serialize(data), encoding="utf-8")
+
+
+def _slug(value):
+    """Return a filesystem-safe slug for a target/scenario id."""
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", value)
+
+
+EVAL_WORKTREE_SOURCE = "worktree"
+EVAL_ABSENT_SOURCE = "absent"
+
+
+def parse_side_source(value, label):
+    """Parse an evaluation side source spec.
+
+    Accepted forms are:
+    - ``worktree``: materialize the current working-tree artifact.
+    - ``absent``: omit the artifact for this side.
+    - ``ref:<git-ref>``: snapshot the artifact from a git ref.
+    """
+    if value == EVAL_WORKTREE_SOURCE:
+        return {"kind": "worktree", "label": EVAL_WORKTREE_SOURCE, "ref": None}
+    if value == EVAL_ABSENT_SOURCE:
+        return {"kind": "absent", "label": EVAL_ABSENT_SOURCE, "ref": None}
+    if isinstance(value, str) and value.startswith("ref:") and value[4:]:
+        ref = value[4:]
+        return {"kind": "ref", "label": ref, "ref": ref}
+    sys.exit(
+        f"error: {label} must be one of 'worktree', 'absent', or 'ref:<git-ref>'; got {value!r}"
+    )
+
+
+def _resolve_side_sources(args):
+    baseline = parse_side_source(getattr(args, "baseline", None) or EVAL_WORKTREE_SOURCE, "--baseline")
+    variant_arg = getattr(args, "variant", None)
+    variant = parse_side_source(variant_arg, "--variant") if variant_arg is not None else None
+    if baseline["kind"] == "absent" and variant is None:
+        sys.exit("error: --baseline absent requires --variant for a comparison run")
+    return {ec.BASELINE_SIDE: baseline, **({ec.VARIANT_SIDE: variant} if variant else {})}
+
+
+def prepare_run(descriptors, manifest, run_dir, *, side_sources, targets, mode, allow_fixture_drift, evaluator=None, evidence_override=None):
+    """Resolve sources into units, then materialize a run via ``eval_contract.prepare``.
+
+    This function owns every repo/git concern so the contract module stays
+    freestanding: it resolves each descriptor's artifact context from the
+    manifest and this checkout, places each side's on-disk source, and builds a
+    ``ScenarioSide`` per (descriptor, side). Worktree sources read the current
+    working tree, ref sources are snapshotted into the run's ``sources/`` tree,
+    and absent sources intentionally omit the artifact. ``eval_contract.prepare``
+    then copies files and stamps records from those units. Returns
+    ``(run_manifest, manifest_path)``.
+    """
+    sides = [side for side in (ec.BASELINE_SIDE, ec.VARIANT_SIDE) if side in side_sources]
+
+    # Fail-fast: when comparing two git-ref sides, assert every scenario's
+    # fixtures are stable across the refs before anything is written, so a drift
+    # abort never leaves a partial dir.
+    git_refs = [source["ref"] for source in side_sources.values() if source["kind"] == "ref"]
+    if git_refs:
+        for descriptor in descriptors:
+            assert_fixtures_stable(descriptor["scenario"], git_refs, allow_fixture_drift)
+
+    # Build units grouped by descriptor (all sides of a descriptor consecutive)
+    # so eval_contract.prepare, which groups consecutive same-scenario units into
+    # one manifest entry, reproduces the prior scenario order and case grouping.
+    units = []
+    for descriptor in descriptors:
+        scenario = descriptor["scenario"]
+        ctx = resolve_artifact_context(scenario, repo_root=REPO_ROOT, rules_dir=RULES_DIR)
+        suite_path = str(descriptor["path"].relative_to(REPO_ROOT))
+        for side in sides:
+            source = side_sources[side]
+            artifact_absent = source["kind"] == "absent"
+            if source["kind"] == "worktree" or artifact_absent:
+                source_base = REPO_ROOT / ctx["source_rel"]
+            else:
+                # Snapshot the per-side source before prepare copies from it.
+                snapshot_artifact_source(source["ref"], ctx["source_rel"], run_dir / "sources" / side)
+                source_base = run_dir / "sources" / side / ctx["source_rel"]
+            units.append(ec.ScenarioSide(
+                scenario=scenario,
+                side=side,
+                source_base=source_base,
+                kind=ctx["kind"],
+                artifact=ctx["artifact"],
+                source_is_dir=ctx["source_is_dir"],
+                artifact_absent=artifact_absent,
+                rule_envelope=ctx.get("rule_envelope"),
+                suite_path=suite_path,
+            ))
+
+    side_labels = {side: source["label"] for side, source in side_sources.items()}
+    return ec.prepare(
+        units, run_dir, targets=targets, mode=mode,
+        runner=runner_tag(manifest, brand=BRAND), side_labels=side_labels,
+        evaluator=evaluator, evidence_override=evidence_override,
+    )
+
+
+# --- executor seam -----------------------------------------------------------
+
+
+def parse_target(value):
+    """Parse a ``tool:model`` target into a descriptor dict."""
+    if ":" not in value:
+        sys.exit(f"error: target {value!r} must be 'tool:model' (e.g. trae:GPT-5.5)")
+    tool, model = value.split(":", 1)
+    if not tool or not model:
+        sys.exit(f"error: target {value!r} must be 'tool:model' (e.g. trae:GPT-5.5)")
+    return {"id": value, "tool": tool, "model": model}
+
+
+# Map an evaluation executor tool to the CLI that runs /evaluate-authoring
+# non-interactively, and how that CLI takes a model. v1 automates Trae only;
+# other tools can still be driven by --executor-command with a freeform argv.
+EVAL_EXECUTOR_TOOLS = {"trae": {"binary": "traecli", "argv": ["exec"], "model_flag": "--model"}}
+
+
+class UnsupportedExecutor(Exception):
+    """Raised when a structured executor names a tool with no known CLI."""
+
+
+class ExecutorUnavailable(Exception):
+    """Raised when a supported executor tool's binary is not on PATH."""
+
+
+class NoExecutor(Exception):
+    """Raised when neither executor form was provided."""
+
+
+def resolve_executor(structured, command):
+    """Return an argv list to run /evaluate-authoring for the orchestrator.
+
+    Exactly one form is given (the caller enforces the mutex):
+
+    - ``structured`` is a ``tool:model`` descriptor (from ``parse_target``): the
+      orchestrator runs through that tool's known CLI with the model pinned.
+      An unknown tool raises ``UnsupportedExecutor``; a known tool whose binary
+      is absent raises ``ExecutorUnavailable``.
+    - ``command`` is a freeform argv string, split on whitespace and used as-is
+      (the escape hatch for custom binaries, extra flags, or wrappers).
+
+    Neither form raises ``NoExecutor``. The orchestrator is the process host,
+    independent of the evaluation ``--target`` (the producing tool/model); its
+    identity is never inferred from a target.
+    """
+    if command:
+        return command.split()
+    if not structured:
+        raise NoExecutor()
+    spec = EVAL_EXECUTOR_TOOLS.get(structured["tool"])
+    if not spec:
+        raise UnsupportedExecutor(structured["tool"])
+    binary = shutil.which(spec["binary"])
+    if not binary:
+        raise ExecutorUnavailable(structured["tool"])
+    return [binary, *spec["argv"], spec["model_flag"], structured["model"]]
+
+
+def eval_runs_root():
+    """Return the default root for evaluation run directories."""
+    return REPO_ROOT / EVAL_RUNS_DIRNAME
+
+
+def _resolve_run_dir(args):
+    """Resolve the run directory for prepare/run.
+
+    An explicit --run-dir wins; otherwise default to a timestamped directory
+    under the runs root so both subcommands share one location policy.
+    """
+    explicit = getattr(args, "run_dir", None)
+    if explicit:
+        return explicit.resolve()
+    return eval_runs_root() / datetime.now().strftime("run-%Y%m%d-%H%M%S")
+
+
+def cmd_evaluate(args):
+    """evaluate: dispatch to the prepare/collect/run/clean subcommand."""
+    subcommand = getattr(args, "evaluate_command", None)
+    if subcommand is None:
+        # Bare `evaluate` (no subcommand) has no --color of its own; print help.
+        args.parser.print_help()
+        return 0
+    resolve_colors(args.color)
+    if subcommand == "prepare":
+        return cmd_evaluate_prepare(args)
+    if subcommand == "collect":
+        return cmd_evaluate_collect(args)
+    if subcommand == "run":
+        return cmd_evaluate_run(args)
+    if subcommand == "clean":
+        return cmd_evaluate_clean(args)
+    args.parser.print_help()
+    return 0
+
+
+def _resolve_targets(args):
+    # A target names the tool/model that produced the output; it is not the same
+    # axis as --mode. Both rendered and sandbox runs must name their target so
+    # cases, results, and the scorecard carry a real tool/model identity rather
+    # than a placeholder, so at least one --target is required.
+    target_args = getattr(args, "target", None)
+    if not target_args:
+        sys.exit("error: at least one --target 'tool:model' is required (e.g. trae:GPT-5.5)")
+    seen = {}
+    for value in target_args:
+        target = parse_target(value)
+        seen.setdefault(target["id"], target)
+    return list(seen.values())
+
+
+def _resolve_evaluator(args):
+    """Return the rubric-evaluator descriptor from --evaluator, or None.
+
+    Optional and non-repeatable: it pins the judge's tool/model as a run-level
+    policy (the same judge across both sides of a scenario). When unset, the
+    orchestrator judges with its own runtime. The actual judge identity is
+    always recorded in results regardless of this directive.
+    """
+    value = getattr(args, "evaluator", None)
+    if not value:
+        return None
+    return parse_target(value)
+
+
+def _resolve_evidence_override(args):
+    """Return the run-time evidence bar from --evidence as ``(consistent, reps)``.
+
+    ``--evidence`` is a single paired value ``consistent/total`` (e.g. ``4/5``,
+    read "4 of 5") so a run cannot set one half of the bar without the other.
+    Returns ``None`` when unset. This parses only the CLI format; the contract
+    coherence rule (``1 <= consistent <= total``) is enforced by
+    ``eval_contract.prepare`` up front, so it stays single-sourced there.
+    """
+    value = getattr(args, "evidence", None)
+    if not value:
+        return None
+    if value.count("/") != 1:
+        sys.exit(f"error: --evidence must be 'consistent/total' (e.g. 4/5), got {value!r}")
+    consistent_s, total_s = value.split("/", 1)
+    try:
+        consistent, total = int(consistent_s), int(total_s)
+    except ValueError:
+        sys.exit(f"error: --evidence must be two integers 'consistent/total' (e.g. 4/5), got {value!r}")
+    return (consistent, total)
+
+
+def _executor_structured(args):
+    """Return the structured executor descriptor from --executor, or None.
+
+    ``--executor tool:model`` is the common, structured form (symmetric with
+    --target); the freeform ``--executor-command`` escape hatch is handled by
+    ``resolve_executor``. The argparse mutex guarantees at most one is set.
+    """
+    value = getattr(args, "executor", None)
+    if not value:
+        return None
+    return parse_target(value)
+
+
+def _attach_scenario_paths(descriptors):
+    """Attach convenience keys (_dir/_path) each scenario needs for fixtures."""
+    for descriptor in descriptors:
+        scenario = descriptor["scenario"]
+        scenario["_path"] = str(descriptor["path"])
+        scenario["_dir"] = descriptor["path"].parent
+
+
+def cmd_evaluate_prepare(args):
+    """evaluate prepare: validate scenarios and write a run manifest + cases."""
+    manifest = load_manifest()
+    plugins = load_plugins()
+    descriptors = resolve_scenario_scope(args, plugins)
+    if not descriptors:
+        print("No scenarios matched the given scope.")
+        return 1
+    _attach_scenario_paths(descriptors)
+    side_sources = _resolve_side_sources(args)
+    targets = _resolve_targets(args)
+    evaluator = _resolve_evaluator(args)
+    evidence_override = _resolve_evidence_override(args)
+    run_dir = _resolve_run_dir(args)
+    run_manifest, manifest_path = prepare_run(
+        descriptors, manifest, run_dir,
+        side_sources=side_sources, targets=targets, mode=args.mode,
+        allow_fixture_drift=getattr(args, "allow_fixture_drift", False),
+        evaluator=evaluator, evidence_override=evidence_override,
+    )
+    print(f"Prepared {len(descriptors)} scenario(s) under {run_dir}")
+    print(f"Run manifest: {manifest_path}")
+    print(f"Next: run /evaluate-authoring against the manifest, then '{cli_name()} evaluate collect {run_dir}'.")
+    return 0
+
+
+def _print_scorecard_summary(report, report_path):
+    """Print the scorecard path, status, aggregate line, and a failure reason."""
+    agg = report["aggregate"]
+    print(f"Scorecard: {report_path}")
+    print(f"Status: {report.get('status', 'ok')}")
+    print(f"Aggregate: {agg['passed']} passed / {agg['failed']} failed / "
+          f"{agg['needs_review']} needs-review ({agg['pass_pct']}% pass)")
+    # Surface why the run is failing, so exit 1 with 0 fails isn't a mystery.
+    reasons = []
+    if agg.get("integrity"):
+        reasons.append(f"{agg['integrity']} integrity finding(s)")
+    if agg.get("missing"):
+        reasons.append(f"{agg['missing']} declared case(s) produced no results")
+    if agg.get("short"):
+        reasons.append(f"{agg['short']} required check(s) ran fewer than the expected repetitions")
+    if agg["passed"] == 0 and not agg["failed"] and not agg["needs_review"] and not agg.get("missing"):
+        reasons.append("no scenario results were scored")
+    if reasons:
+        # An integrity finding invalidates the run; otherwise it is incomplete.
+        headline = "Invalid run" if agg.get("integrity") else "Incomplete run"
+        print(f"{headline}: {'; '.join(reasons)}.")
+        for f in report.get("integrity_findings") or []:
+            where = f"{f['check']} rep {f['repetition']}" if f.get("check") else "(both sides)"
+            print(f"  integrity: {f['scenario']} [{f['target']}/{f['side']}] {where} — {f['finding']}")
+        for m in report.get("missing_coverage") or []:
+            print(f"  missing: {m['scenario']} [{m['target']}/{m['side']}]")
+        for s in report.get("short_checks") or []:
+            print(f"  short: {s['scenario']} [{s['target']}/{s['side']}] {s['check']} "
+                  f"(got {s['got']}/{s['expected']})")
+
+
+def scorecard_exit_status(report: "ec.Report") -> int:
+    """Return 0 only for a complete run with no failing or needs-review scenario.
+
+    This is the project runner's gate policy: it maps the contract's factual
+    report to a pass/fail exit code. A scenario side fails or is needs-review
+    when a gating check does; a declared case that produced no results counts as
+    missing coverage, as does a required check that ran fewer than the firm
+    expected repetitions; and an integrity finding (a producer that is not the
+    case target, an unhonored pinned evaluator, or an evaluator that differs
+    across a scenario's baseline/variant sides) also fails the run, since it makes the
+    evidence untrustworthy. Any of these yields a nonzero status so the exit code
+    is a trustworthy gate rather than a false pass on an incomplete or
+    low-integrity run. The contract describes the outcome; deciding what counts
+    as a pass lives here, in the runner.
+    """
+    agg = report["aggregate"]
+    if (agg["failed"] or agg["needs_review"] or agg.get("missing")
+            or agg.get("short") or agg.get("integrity")):
+        return 1
+    # A run that scored nothing at all is not a pass.
+    if agg["passed"] == 0:
+        return 1
+    return 0
+
+
+def cmd_evaluate_collect(args):
+    """evaluate collect: aggregate JSONL results into a scorecard + exit status."""
+    run_dir = args.run_dir.resolve()
+    report = ec.collect(run_dir)
+    report_path = args.report.resolve() if getattr(args, "report", None) else (run_dir / "scorecard.md")
+    ec.write_scorecard(report, report_path)
+    _print_scorecard_summary(report, report_path)
+    return scorecard_exit_status(report)
+
+
+def cmd_evaluate_run(args):
+    """evaluate run: drive prepare -> executor -> collect."""
+    manifest = load_manifest()
+    plugins = load_plugins()
+    descriptors = resolve_scenario_scope(args, plugins)
+    if not descriptors:
+        print("No scenarios matched the given scope.")
+        return 1
+    _attach_scenario_paths(descriptors)
+    side_sources = _resolve_side_sources(args)
+    targets = _resolve_targets(args)
+    evaluator = _resolve_evaluator(args)
+    evidence_override = _resolve_evidence_override(args)
+    # Resolve the orchestrator executor up front so a bad executor fails before
+    # a run dir is materialized. The executor is the process host, independent
+    # of --target; exactly one form is required by the argparse mutex.
+    try:
+        executor = resolve_executor(_executor_structured(args), getattr(args, "executor_command", None))
+    except NoExecutor:
+        sys.exit(
+            "error: an executor is required; pass --executor tool:model or "
+            "--executor-command, or run 'evaluate prepare' and orchestrate manually."
+        )
+    except UnsupportedExecutor as exc:
+        sys.exit(
+            f"error: --executor tool {str(exc)!r} has no known CLI (supported: "
+            f"{', '.join(sorted(EVAL_EXECUTOR_TOOLS))}); use --executor-command to name a "
+            "non-interactive command, or run 'evaluate prepare' and orchestrate manually."
+        )
+    except ExecutorUnavailable as exc:
+        sys.exit(
+            f"error: executor tool {str(exc)!r} is not installed on PATH; install it, use "
+            "--executor-command to name an available command, or run 'evaluate prepare' and "
+            "orchestrate manually."
+        )
+    run_dir = _resolve_run_dir(args)
+    run_manifest, manifest_path = prepare_run(
+        descriptors, manifest, run_dir,
+        side_sources=side_sources, targets=targets, mode=args.mode,
+        allow_fixture_drift=getattr(args, "allow_fixture_drift", False),
+        evaluator=evaluator, evidence_override=evidence_override,
+    )
+    print(f"Prepared {len(descriptors)} scenario(s) under {run_dir}")
+
+    # The `/evaluate-authoring` slash form is Trae's flat command-invocation
+    # syntax (per `traecli exec --help`: prefix `/name` to invoke a command);
+    # it is not universal — other tools namespace or prefix commands differently.
+    # This is safe today because `EVAL_EXECUTOR_TOOLS` only maps Trae; when a
+    # second executor tool is added, move this invocation template into that
+    # tool's executor spec (beside binary/argv/model_flag) rather than hardcoding
+    # one tool's form for every executor.
+    argv = [*executor, f"/evaluate-authoring --run {manifest_path}"]
+    proc = subprocess.run(argv, check=False)
+    executor_failed = proc.returncode != 0
+    if executor_failed:
+        print(f"Executor exited with status {proc.returncode}; results may be incomplete.")
+
+    report = ec.collect(run_dir, run_manifest)
+    report_path = args.report.resolve() if getattr(args, "report", None) else (run_dir / "scorecard.md")
+    ec.write_scorecard(report, report_path)
+    _print_scorecard_summary(report, report_path)
+    # A failed executor never yields a passing run, even if partial results scored.
+    return 1 if executor_failed else scorecard_exit_status(report)
+
+
+def _is_run_dir(path):
+    """Return True when ``path`` looks like an evaluation run directory."""
+    return path.is_dir() and (path / "manifest.json").is_file()
+
+
+def cmd_evaluate_clean(args):
+    """evaluate clean: remove evaluation run directories under the runs root."""
+    root = args.runs_root.resolve() if getattr(args, "runs_root", None) else eval_runs_root()
+    if not root.is_dir():
+        print(f"Nothing to clean: {root} does not exist.")
+        return 0
+    # Only touch actual run dirs (those with a manifest), so an explicit
+    # --runs-root pointed at a shared dir cannot delete unrelated content.
+    runs = sorted((p for p in root.iterdir() if _is_run_dir(p)), key=lambda p: p.name)
+    keep_last = getattr(args, "keep_last", 0) or 0
+    to_remove = runs[:-keep_last] if keep_last else runs
+    if not to_remove:
+        print(f"Nothing to clean: {len(runs)} run(s) under {root}, keeping last {keep_last}.")
+        return 0
+    for run in to_remove:
+        if getattr(args, "dry_run", False):
+            print(f"would remove {run}")
+        else:
+            shutil.rmtree(run)
+            print(f"removed {run}")
+    kept = len(runs) - len(to_remove)
+    verb = "would remove" if getattr(args, "dry_run", False) else "removed"
+    print(f"{verb} {len(to_remove)} run(s); kept {kept}.")
+    return 0
+
+
+def _iter_manifest_component_paths(manifest):
+    """Yield every repo-relative path a plugin declares as a shippable artifact."""
+    for plugin in manifest.get("plugins", []):
+        for _, src, _ in plugin_component_entries(plugin, set(COMPONENTS)):
+            yield src
+        plugin_name = plugin["name"]
+        for skill, rules in plugin.get("skillReferences", {}).items():
+            for rule_rel in rules:
+                yield PLUGINS_DIR / plugin_name / "skills" / skill / "references" / Path(rule_rel).name
+
+
+def check_eval_exclusion(manifest, findings):
+    """Lock in that eval assets never resolve as shippable artifacts.
+
+    Discovery is manifest-driven, so eval trees are already invisible to
+    generate/install/inventory; this regression guard fails loudly if a declared
+    component path ever points under an eval/ segment, or a discovered scenario
+    file collides with a manifest-derived shippable path.
+    """
+    eval_segment = f"{os.sep}{EVAL_DIR_NAME}{os.sep}"
+    shippable = set()
+    for path in _iter_manifest_component_paths(manifest):
+        resolved = str(path.resolve())
+        shippable.add(resolved)
+        if eval_segment in resolved or resolved.endswith(f"{os.sep}{EVAL_DIR_NAME}"):
+            findings.append(f"{path} (declared component resolves under eval/)")
+    for descriptor in discover_scenarios(manifest.get("plugins", [])):
+        resolved = str(descriptor["path"].resolve())
+        if resolved in shippable:
+            findings.append(f"{descriptor['path']} (scenario collides with a shippable artifact path)")
 
 
 def add_color_arg(parser):
@@ -2105,6 +2946,35 @@ def add_selection_args(parser, *, writes):
         + ("/symlink" if writes else "") + ") and use their defaults. Flags you pass still override.",
     )
     add_color_arg(parser)
+
+
+def add_evaluate_scope_args(parser):
+    """Add the repeatable scope args shared by 'evaluate prepare' and 'run'."""
+    parser.add_argument("artifact", nargs="?", help="Artifact path to scope scenarios to (optional).")
+    parser.add_argument("--plugin", action="append", help="Plugin to scope to (repeatable; default: all plugins).")
+    parser.add_argument(
+        "--component", action="append", choices=COMPONENT_CHOICES,
+        help="Component kinds to scope to (repeatable; use 'all' for every kind).",
+    )
+    parser.add_argument("--scenario", action="append", help="Scenario id to scope to (repeatable).")
+    parser.add_argument(
+        "--target", action="append",
+        help="Evaluation target as 'tool:model' (required, repeatable; produces a target matrix).",
+    )
+    parser.add_argument(
+        "--evaluator",
+        help="Pin the rubric evaluator as 'tool:model' (optional). When unset, the "
+        "orchestrator judges with its own runtime; the actual judge is recorded either way.",
+    )
+    parser.add_argument(
+        "--evidence", metavar="CONSISTENT/TOTAL",
+        help="Override the evidence bar for this run as consistent/total (e.g. 4/5 = "
+        "4 of 5 repetitions must agree), overriding each scenario's tier default.",
+    )
+    parser.add_argument(
+        "--all", action="store_true",
+        help="Evaluate every discovered scenario (required when no artifact or scope filter is given).",
+    )
 
 
 class _SubcommandHelpFormatter(argparse.HelpFormatter):
@@ -2228,6 +3098,98 @@ def main(argv=None, *, repo_root=None, manifest_name=DEFAULT_MANIFEST_NAME, prog
     p_validate = sub.add_parser("validate", help=validate_help, description=validate_help)
     add_color_arg(p_validate)
     p_validate.set_defaults(func=cmd_validate)
+
+    evaluate_help = "Run behavioral evaluation for authoring artifacts (prepare/collect/run)."
+    p_evaluate = sub.add_parser(
+        "evaluate", help=evaluate_help, description=evaluate_help,
+        formatter_class=_SubcommandHelpFormatter,
+    )
+    eval_sub = p_evaluate.add_subparsers(
+        dest="evaluate_command", title="evaluate commands", metavar="<subcommand>",
+    )
+    # Bare `evaluate` prints its own help via cmd_evaluate dispatch.
+    p_evaluate.set_defaults(func=cmd_evaluate, parser=p_evaluate)
+
+    prepare_help = "Validate scenarios and write a run manifest plus execution cases."
+    p_prepare = eval_sub.add_parser("prepare", help=prepare_help, description=prepare_help)
+    add_evaluate_scope_args(p_prepare)
+    p_prepare.add_argument(
+        "--baseline", default=EVAL_WORKTREE_SOURCE, metavar="SOURCE",
+        help="Baseline side source: 'worktree', 'absent', or 'ref:<git-ref>' (default: worktree).",
+    )
+    p_prepare.add_argument(
+        "--variant", metavar="SOURCE",
+        help="Optional variant side source for comparison: 'worktree', 'absent', or 'ref:<git-ref>'.",
+    )
+    p_prepare.add_argument(
+        "--run-dir", type=Path,
+        help=f"Run directory (default: a timestamped dir under {EVAL_RUNS_DIRNAME}/).",
+    )
+    p_prepare.add_argument(
+        "--mode", choices=EVAL_MODES, default=DEFAULT_EVAL_MODE,
+        help="Execution mode: 'rendered' builds cases from source/fixtures (default); "
+        "'sandbox' also scaffolds an isolated sandbox for true-activation runs.",
+    )
+    p_prepare.add_argument(
+        "--allow-fixture-drift", action="store_true",
+        help="Permit fixtures that differ across compared ref:<git-ref> sources (default: reject).",
+    )
+    add_color_arg(p_prepare)
+    p_prepare.set_defaults(func=cmd_evaluate, parser=p_prepare)
+
+    collect_help = "Aggregate JSONL result records into a scorecard and set exit status."
+    p_collect = eval_sub.add_parser("collect", help=collect_help, description=collect_help)
+    p_collect.add_argument("run_dir", type=Path, help="Run directory produced by 'evaluate prepare'.")
+    p_collect.add_argument("--report", type=Path, help="Scorecard Markdown path (a .json is written alongside).")
+    add_color_arg(p_collect)
+    p_collect.set_defaults(func=cmd_evaluate, parser=p_collect)
+
+    run_help = "Run prepare, invoke the runtime executor, then collect."
+    p_run = eval_sub.add_parser("run", help=run_help, description=run_help)
+    add_evaluate_scope_args(p_run)
+    p_run.add_argument(
+        "--baseline", default=EVAL_WORKTREE_SOURCE, metavar="SOURCE",
+        help="Baseline side source: 'worktree', 'absent', or 'ref:<git-ref>' (default: worktree).",
+    )
+    p_run.add_argument(
+        "--variant", metavar="SOURCE",
+        help="Optional variant side source for comparison: 'worktree', 'absent', or 'ref:<git-ref>'.",
+    )
+    p_run.add_argument(
+        "--run-dir", type=Path,
+        help=f"Run directory (default: a timestamped dir under {EVAL_RUNS_DIRNAME}/).",
+    )
+    p_run.add_argument("--mode", choices=EVAL_MODES, default=DEFAULT_EVAL_MODE, help="Execution mode (see 'prepare').")
+    # The orchestrator executor is required and mutually exclusive: the common
+    # structured form pins tool+model; the freeform command is the escape hatch.
+    executor_group = p_run.add_mutually_exclusive_group(required=True)
+    executor_group.add_argument(
+        "--executor", metavar="TOOL:MODEL",
+        help="Orchestrator as 'tool:model' (e.g. trae:GPT-5.5); runs that tool's CLI with the model pinned.",
+    )
+    executor_group.add_argument(
+        "--executor-command", dest="executor_command", metavar="ARGV",
+        help="Orchestrator as a freeform command argv (space-separated); the escape hatch for custom binaries.",
+    )
+    p_run.add_argument("--allow-fixture-drift", action="store_true", help="Permit fixtures that differ across refs.")
+    p_run.add_argument("--report", type=Path, help="Scorecard Markdown path (a .json is written alongside).")
+    add_color_arg(p_run)
+    p_run.set_defaults(func=cmd_evaluate, parser=p_run)
+
+    clean_help = f"Remove evaluation run directories under {EVAL_RUNS_DIRNAME}/."
+    p_clean = eval_sub.add_parser("clean", help=clean_help, description=clean_help)
+    p_clean.add_argument(
+        "--runs-root", type=Path,
+        help=f"Directory holding run dirs to prune (default: {EVAL_RUNS_DIRNAME}/). "
+        "Only subdirectories containing a manifest.json are removed.",
+    )
+    p_clean.add_argument(
+        "--keep-last", type=int, default=0, metavar="N",
+        help="Keep the N most recent run directories; remove the rest (default: remove all).",
+    )
+    p_clean.add_argument("--dry-run", action="store_true", help="Show what would be removed without deleting.")
+    add_color_arg(p_clean)
+    p_clean.set_defaults(func=cmd_evaluate, parser=p_clean)
 
     args = parser.parse_args(argv)
     if args.command is None:
